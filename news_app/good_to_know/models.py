@@ -21,12 +21,6 @@ class CustomUser(AbstractUser):
     Role-based permissions are automatically assigned through
     Django groups whenever a user account is saved.
 
-    Attributes:
-        role: The application role assigned to the user.
-        publishers: Publishers associated with the journalist.
-        editor_publishers: Publishers assigned to the editor.
-        subscribed_publishers: Publishers followed by the reader.
-        subscribed_journalists: Journalists followed by the reader.
     """
 
     class Role(models.TextChoices):
@@ -275,10 +269,6 @@ class Publisher(models.Model):
     journalists. Readers can also subscribe to publishers to
     receive their approved publications.
 
-    Attributes:
-        name: The publisher's name.
-        description: An optional description of the publisher.
-        created_at: The date and time the publisher was created.
     """
 
     name = models.CharField(max_length=255)
@@ -311,16 +301,6 @@ class Article(models.Model):
     Independent articles can be approved without publisher
     affiliation.
 
-    Attributes:
-        title: The article title.
-        content: The main article content.
-        image: An optional uploaded article image.
-        author: The journalist responsible for the article.
-        publisher: The publisher associated with the article,
-            if applicable.
-        created_at: The date and time the article was created.
-        approved: Indicates whether the article has received
-            editorial approval.
     """
 
     title = models.CharField(max_length=255)
@@ -429,17 +409,6 @@ class Newsletter(models.Model):
     and contain multiple articles through a many-to-many
     relationship.
 
-    Attributes:
-        title: The newsletter title.
-        description: The newsletter description.
-        created_at: The date and time the newsletter was created.
-        author: The journalist or editor responsible for the
-            newsletter.
-        publisher: The publisher associated with the newsletter,
-            if applicable.
-        articles: The articles included in the newsletter.
-        approved: Indicates whether the newsletter has received
-            editorial approval.
     """
 
     title = models.CharField(max_length=255)

@@ -1,0 +1,771 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../../">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>good_to_know.forms &mdash; GoodToKnow 00.00.01 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="../../_static/css/theme.css?v=9edc463e" />
+
+  
+      <script src="../../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../../_static/documentation_options.js?v=d7bb8d4d"></script>
+      <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
+      <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
+    <script src="../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../../index.html" class="icon icon-home">
+            GoodToKnow
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../modules.html">good_to_know</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../index.html">GoodToKnow</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../index.html">Module code</a></li>
+      <li class="breadcrumb-item active">good_to_know.forms</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>Source code for good_to_know.forms</h1><div class="highlight"><pre>
+<span></span>
+<span class="c1"># Functions in this forms.py dictate how user input is handled</span>
+<span class="c1"># ============================================================</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">django</span><span class="w"> </span><span class="kn">import</span> <span class="n">forms</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">django.contrib.auth.forms</span><span class="w"> </span><span class="kn">import</span> <span class="n">UserCreationForm</span><span class="p">,</span> <span class="n">AuthenticationForm</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">.models</span><span class="w"> </span><span class="kn">import</span> <span class="n">CustomUser</span><span class="p">,</span> <span class="n">Publisher</span><span class="p">,</span> <span class="n">Article</span><span class="p">,</span> <span class="n">Newsletter</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">django.db</span><span class="w"> </span><span class="kn">import</span> <span class="n">transaction</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">django.db.models</span><span class="w"> </span><span class="kn">import</span> <span class="n">Q</span>
+
+
+<span class="c1"># Reader registration</span>
+<span class="c1"># -------------------</span>
+<div class="viewcode-block" id="ReaderRegistrationForm">
+<a class="viewcode-back" href="../../good_to_know.html#good_to_know.forms.ReaderRegistrationForm">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">ReaderRegistrationForm</span><span class="p">(</span><span class="n">UserCreationForm</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">"""Provide a registration form for reader accounts.</span>
+
+<span class="sd">    Extends Django's ``UserCreationForm`` to handle the registration</span>
+<span class="sd">    of users with the reader role.</span>
+
+<span class="sd">    The form collects the username, email address and password</span>
+<span class="sd">    confirmation fields required to create a reader account.</span>
+
+<span class="sd">    The user's role is automatically assigned as ``READER``</span>
+<span class="sd">    when the account is saved.</span>
+
+<span class="sd">    """</span>
+
+<div class="viewcode-block" id="ReaderRegistrationForm.Meta">
+<a class="viewcode-back" href="../../good_to_know.html#good_to_know.forms.ReaderRegistrationForm.Meta">[docs]</a>
+    <span class="k">class</span><span class="w"> </span><span class="nc">Meta</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">"""Define the model and fields used by the registration form."""</span>
+
+        <span class="n">model</span> <span class="o">=</span> <span class="n">CustomUser</span>
+        <span class="n">fields</span> <span class="o">=</span> <span class="p">[</span><span class="s1">'username'</span><span class="p">,</span> <span class="s1">'email'</span><span class="p">,</span> <span class="s1">'password1'</span><span class="p">,</span> <span class="s1">'password2'</span><span class="p">]</span></div>
+
+
+<div class="viewcode-block" id="ReaderRegistrationForm.save">
+<a class="viewcode-back" href="../../good_to_know.html#good_to_know.forms.ReaderRegistrationForm.save">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">save</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">commit</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">"""Create and save a reader account.</span>
+
+<span class="sd">        Uses the parent ``UserCreationForm`` save method to create</span>
+<span class="sd">        the user instance without immediately saving it.</span>
+
+<span class="sd">        Assigns the reader role before optionally saving the account</span>
+<span class="sd">        to the database.</span>
+
+<span class="sd">        The ``commit`` argument determines whether the user is saved</span>
+<span class="sd">        immediately or returned as an unsaved instance.</span>
+
+<span class="sd">        :param commit: Determines whether the user instance is saved</span>
+<span class="sd">            to the database.</span>
+<span class="sd">        :type commit: bool</span>
+<span class="sd">        :returns: The newly created reader user instance.</span>
+<span class="sd">        :rtype: CustomUser</span>
+<span class="sd">        """</span>
+
+        <span class="n">user</span> <span class="o">=</span> <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">save</span><span class="p">(</span><span class="n">commit</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+        <span class="n">user</span><span class="o">.</span><span class="n">role</span> <span class="o">=</span> <span class="n">CustomUser</span><span class="o">.</span><span class="n">Role</span><span class="o">.</span><span class="n">READER</span>
+
+        <span class="k">if</span> <span class="n">commit</span><span class="p">:</span>
+            <span class="n">user</span><span class="o">.</span><span class="n">save</span><span class="p">()</span>
+
+        <span class="k">return</span> <span class="n">user</span></div>
+</div>
+
+
+
+<span class="c1"># Journalist registration</span>
+<span class="c1"># -----------------------</span>
+<div class="viewcode-block" id="JournalistRegistrationForm">
+<a class="viewcode-back" href="../../good_to_know.html#good_to_know.forms.JournalistRegistrationForm">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">JournalistRegistrationForm</span><span class="p">(</span><span class="n">UserCreationForm</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">"""Provide a registration form for journalist accounts.</span>
+
+<span class="sd">    Extends Django's ``UserCreationForm`` to support journalist</span>
+<span class="sd">    registration.</span>
+
+<span class="sd">    The form collects the username, email address and password</span>
+<span class="sd">    confirmation fields required to create a journalist account.</span>
+
+<span class="sd">    Journalists can optionally associate their accounts with</span>
+<span class="sd">    multiple publishers during registration. Independent journalists</span>
+<span class="sd">    can leave the publisher selection blank.</span>
+
+<span class="sd">    Publisher affiliations are stored using the user model's</span>
+<span class="sd">    many-to-many relationship.</span>
+
+<span class="sd">    """</span>
+
+    <span class="n">journalist_publisher</span> <span class="o">=</span> <span class="n">forms</span><span class="o">.</span><span class="n">ModelMultipleChoiceField</span><span class="p">(</span>
+        <span class="n">queryset</span><span class="o">=</span><span class="n">Publisher</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">all</span><span class="p">(),</span>
+        <span class="n">required</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+        <span class="n">label</span><span class="o">=</span><span class="s2">"Select your publishers"</span><span class="p">,</span>
+        <span class="n">widget</span><span class="o">=</span><span class="n">forms</span><span class="o">.</span><span class="n">CheckboxSelectMultiple</span><span class="p">(),</span>
+        <span class="n">help_text</span><span class="o">=</span><span class="p">(</span>
+            <span class="s2">"You can select multiple publishers or leave this blank "</span>
+            <span class="s2">"if you are an independent journalist."</span>
+        <span class="p">)</span>
+    <span class="p">)</span>
+
+<div class="viewcode-block" id="JournalistRegistrationForm.Meta">
+<a class="viewcode-back" href="../../good_to_know.html#good_to_know.forms.JournalistRegistrationForm.Meta">[docs]</a>
+    <span class="k">class</span><span class="w"> </span><span class="nc">Meta</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">"""Define the model and fields used by the registration form."""</span>
+
+        <span class="n">model</span> <span class="o">=</span> <span class="n">CustomUser</span>
+        <span class="n">fields</span> <span class="o">=</span> <span class="p">[</span>
+            <span class="s1">'username'</span><span class="p">,</span>
+            <span class="s1">'email'</span><span class="p">,</span>
+            <span class="s1">'password1'</span><span class="p">,</span>
+            <span class="s1">'password2'</span><span class="p">,</span>
+        <span class="p">]</span></div>
+
+
+<div class="viewcode-block" id="JournalistRegistrationForm.save">
+<a class="viewcode-back" href="../../good_to_know.html#good_to_know.forms.JournalistRegistrationForm.save">[docs]</a>
+    <span class="nd">@transaction</span><span class="o">.</span><span class="n">atomic</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">save</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">commit</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">"""Create and save a journalist account.</span>
+
+<span class="sd">        Uses the parent ``UserCreationForm`` save method to create</span>
+<span class="sd">        the user instance without immediately saving it.</span>
+
+<span class="sd">        Assigns the journalist role before saving the account.</span>
+
+<span class="sd">        When ``commit`` is enabled, the user is saved to the database</span>
+<span class="sd">        and their selected publisher affiliations are assigned.</span>
+
+<span class="sd">        The transaction ensures that the user creation and publisher</span>
+<span class="sd">        association operations are performed atomically.</span>
+
+<span class="sd">        :param commit: Determines whether the user instance is saved</span>
+<span class="sd">            to the database.</span>
+<span class="sd">        :type commit: bool</span>
+<span class="sd">        :returns: The newly created journalist user instance.</span>
+<span class="sd">        :rtype: CustomUser</span>
+<span class="sd">        """</span>
+
+        <span class="n">user</span> <span class="o">=</span> <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">save</span><span class="p">(</span><span class="n">commit</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+        <span class="n">user</span><span class="o">.</span><span class="n">role</span> <span class="o">=</span> <span class="n">CustomUser</span><span class="o">.</span><span class="n">Role</span><span class="o">.</span><span class="n">JOURNALIST</span>
+
+        <span class="k">if</span> <span class="n">commit</span><span class="p">:</span>
+            <span class="n">user</span><span class="o">.</span><span class="n">save</span><span class="p">()</span>
+            <span class="n">user</span><span class="o">.</span><span class="n">publishers</span><span class="o">.</span><span class="n">set</span><span class="p">(</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">cleaned_data</span><span class="p">[</span><span class="s1">'journalist_publisher'</span><span class="p">]</span>
+            <span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">user</span></div>
+</div>
+
+
+
+<span class="c1"># Editor registration</span>
+<span class="c1"># -------------------</span>
+<div class="viewcode-block" id="EditorRegistrationForm">
+<a class="viewcode-back" href="../../good_to_know.html#good_to_know.forms.EditorRegistrationForm">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">EditorRegistrationForm</span><span class="p">(</span><span class="n">UserCreationForm</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">"""Provide a registration form for editor accounts.</span>
+
+<span class="sd">    Extends Django's ``UserCreationForm`` to support editor</span>
+<span class="sd">    registration.</span>
+
+<span class="sd">    The form collects the username, email address and password</span>
+<span class="sd">    confirmation fields required to create an editor account.</span>
+
+<span class="sd">    Editors can associate their accounts with existing publishers</span>
+<span class="sd">    or register a new publisher during account creation.</span>
+
+<span class="sd">    Multiple existing publishers can be selected. Alternatively,</span>
+<span class="sd">    a new publisher can be created by providing its name and</span>
+<span class="sd">    an optional description.</span>
+
+<span class="sd">    The form prevents editors from selecting existing publishers</span>
+<span class="sd">    and creating a new publisher simultaneously.</span>
+
+<span class="sd">    Publisher names are checked to prevent duplicate registrations.</span>
+
+<span class="sd">    """</span>
+
+    <span class="n">editor_publishers</span> <span class="o">=</span> <span class="n">forms</span><span class="o">.</span><span class="n">ModelMultipleChoiceField</span><span class="p">(</span>
+        <span class="n">queryset</span><span class="o">=</span><span class="n">Publisher</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">all</span><span class="p">(),</span>
+        <span class="n">required</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+        <span class="n">label</span><span class="o">=</span><span class="s2">"Select your publishers"</span><span class="p">,</span>
+        <span class="n">widget</span><span class="o">=</span><span class="n">forms</span><span class="o">.</span><span class="n">CheckboxSelectMultiple</span><span class="p">(),</span>
+        <span class="n">help_text</span><span class="o">=</span><span class="p">(</span>
+            <span class="s2">"Select multiple publishers or create a new publisher."</span>
+        <span class="p">)</span>
+    <span class="p">)</span>
+
+    <span class="n">publisher_name</span> <span class="o">=</span> <span class="n">forms</span><span class="o">.</span><span class="n">CharField</span><span class="p">(</span>
+        <span class="n">max_length</span><span class="o">=</span><span class="mi">255</span><span class="p">,</span>
+        <span class="n">required</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+        <span class="n">label</span><span class="o">=</span><span class="s2">"Or enter a new publisher name"</span><span class="p">,</span>
+        <span class="n">widget</span><span class="o">=</span><span class="n">forms</span><span class="o">.</span><span class="n">TextInput</span><span class="p">(</span><span class="n">attrs</span><span class="o">=</span><span class="p">{</span>
+            <span class="s1">'class'</span><span class="p">:</span> <span class="s1">'form-control'</span><span class="p">,</span>
+            <span class="s1">'placeholder'</span><span class="p">:</span> <span class="s1">'Enter publisher name'</span>
+        <span class="p">})</span>
+    <span class="p">)</span>
+
+    <span class="n">publisher_description</span> <span class="o">=</span> <span class="n">forms</span><span class="o">.</span><span class="n">CharField</span><span class="p">(</span>
+        <span class="n">required</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+        <span class="n">label</span><span class="o">=</span><span class="s2">"Publisher description"</span><span class="p">,</span>
+        <span class="n">widget</span><span class="o">=</span><span class="n">forms</span><span class="o">.</span><span class="n">Textarea</span><span class="p">(</span><span class="n">attrs</span><span class="o">=</span><span class="p">{</span>
+            <span class="s1">'class'</span><span class="p">:</span> <span class="s1">'form-control'</span><span class="p">,</span>
+            <span class="s1">'rows'</span><span class="p">:</span> <span class="mi">3</span><span class="p">,</span>
+            <span class="s1">'placeholder'</span><span class="p">:</span> <span class="s1">'Describe your publisher'</span>
+        <span class="p">})</span>
+    <span class="p">)</span>
+
+<div class="viewcode-block" id="EditorRegistrationForm.Meta">
+<a class="viewcode-back" href="../../good_to_know.html#good_to_know.forms.EditorRegistrationForm.Meta">[docs]</a>
+    <span class="k">class</span><span class="w"> </span><span class="nc">Meta</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">"""Define the model and fields used by the registration form."""</span>
+
+        <span class="n">model</span> <span class="o">=</span> <span class="n">CustomUser</span>
+        <span class="n">fields</span> <span class="o">=</span> <span class="p">[</span>
+            <span class="s1">'username'</span><span class="p">,</span>
+            <span class="s1">'email'</span><span class="p">,</span>
+            <span class="s1">'password1'</span><span class="p">,</span>
+            <span class="s1">'password2'</span><span class="p">,</span>
+        <span class="p">]</span></div>
+
+
+<div class="viewcode-block" id="EditorRegistrationForm.clean">
+<a class="viewcode-back" href="../../good_to_know.html#good_to_know.forms.EditorRegistrationForm.clean">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">clean</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">"""Validate publisher selections and new publisher details.</span>
+
+<span class="sd">        Ensures that the editor selects either existing publishers</span>
+<span class="sd">        or provides details for a new publisher.</span>
+
+<span class="sd">        The validation prevents the simultaneous selection of</span>
+<span class="sd">        existing publishers and creation of a new publisher.</span>
+
+<span class="sd">        New publisher names are stripped of surrounding whitespace</span>
+<span class="sd">        and checked against existing publisher records to prevent</span>
+<span class="sd">        duplicate names.</span>
+
+<span class="sd">        :raises ValidationError: If neither an existing publisher</span>
+<span class="sd">            nor a new publisher name is provided, or if both are</span>
+<span class="sd">            supplied simultaneously.</span>
+<span class="sd">        :returns: The validated form data.</span>
+<span class="sd">        :rtype: dict</span>
+<span class="sd">        """</span>
+
+        <span class="n">cleaned_data</span> <span class="o">=</span> <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">clean</span><span class="p">()</span>
+
+        <span class="n">existing</span> <span class="o">=</span> <span class="n">cleaned_data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">'editor_publishers'</span><span class="p">)</span>
+        <span class="n">new_name</span> <span class="o">=</span> <span class="n">cleaned_data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">'publisher_name'</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">existing</span> <span class="ow">and</span> <span class="n">new_name</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">forms</span><span class="o">.</span><span class="n">ValidationError</span><span class="p">(</span>
+                <span class="s2">"Select an existing publisher OR enter a new one, not both."</span>
+            <span class="p">)</span>
+
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">existing</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">new_name</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">forms</span><span class="o">.</span><span class="n">ValidationError</span><span class="p">(</span>
+                <span class="s2">"Please select a publisher or enter a new publisher."</span>
+            <span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">new_name</span><span class="p">:</span>
+            <span class="n">new_name</span> <span class="o">=</span> <span class="n">new_name</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span>
+
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">new_name</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">add_error</span><span class="p">(</span>
+                    <span class="s1">'publisher_name'</span><span class="p">,</span>
+                    <span class="s2">"Publisher name cannot be blank."</span>
+                <span class="p">)</span>
+
+            <span class="k">elif</span> <span class="n">Publisher</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span>
+                <span class="n">name__iexact</span><span class="o">=</span><span class="n">new_name</span>
+            <span class="p">)</span><span class="o">.</span><span class="n">exists</span><span class="p">():</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">add_error</span><span class="p">(</span>
+                    <span class="s1">'publisher_name'</span><span class="p">,</span>
+                    <span class="s2">"This publisher already exists. Please select it instead."</span>
+                <span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">cleaned_data</span></div>
+
+
+<div class="viewcode-block" id="EditorRegistrationForm.save">
+<a class="viewcode-back" href="../../good_to_know.html#good_to_know.forms.EditorRegistrationForm.save">[docs]</a>
+    <span class="nd">@transaction</span><span class="o">.</span><span class="n">atomic</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">save</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">commit</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">"""Create and save an editor account and publisher associations.</span>
+
+<span class="sd">        Uses the parent ``UserCreationForm`` save method to create</span>
+<span class="sd">        the user instance without immediately saving it.</span>
+
+<span class="sd">        Assigns the editor role to the user.</span>
+
+<span class="sd">        If ``commit`` is disabled, returns the unsaved user instance.</span>
+
+<span class="sd">        Otherwise, the method either associates the editor with</span>
+<span class="sd">        the selected existing publishers or creates a new publisher</span>
+<span class="sd">        using the supplied name and description.</span>
+
+<span class="sd">        The editor account is then saved and associated with the</span>
+<span class="sd">        relevant publishers through the many-to-many relationship.</span>
+
+<span class="sd">        The transaction ensures that the database operations are</span>
+<span class="sd">        performed atomically.</span>
+
+<span class="sd">        :param commit: Determines whether the user instance and</span>
+<span class="sd">            publisher associations are saved to the database.</span>
+<span class="sd">        :type commit: bool</span>
+<span class="sd">        :returns: The newly created editor user instance.</span>
+<span class="sd">        :rtype: CustomUser</span>
+<span class="sd">        """</span>
+
+        <span class="n">user</span> <span class="o">=</span> <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">save</span><span class="p">(</span><span class="n">commit</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+        <span class="n">user</span><span class="o">.</span><span class="n">role</span> <span class="o">=</span> <span class="n">CustomUser</span><span class="o">.</span><span class="n">Role</span><span class="o">.</span><span class="n">EDITOR</span>
+
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">commit</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">user</span>
+
+        <span class="n">publishers</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">cleaned_data</span><span class="p">[</span><span class="s1">'editor_publishers'</span><span class="p">]</span>
+
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">publishers</span><span class="p">:</span>
+            <span class="n">publisher</span> <span class="o">=</span> <span class="n">Publisher</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">create</span><span class="p">(</span>
+                <span class="n">name</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">cleaned_data</span><span class="p">[</span><span class="s1">'publisher_name'</span><span class="p">]</span><span class="o">.</span><span class="n">strip</span><span class="p">(),</span>
+                <span class="n">description</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">cleaned_data</span><span class="p">[</span><span class="s1">'publisher_description'</span><span class="p">]</span>
+            <span class="p">)</span>
+            <span class="n">publishers</span> <span class="o">=</span> <span class="p">[</span><span class="n">publisher</span><span class="p">]</span>
+
+        <span class="n">user</span><span class="o">.</span><span class="n">save</span><span class="p">()</span>
+        <span class="n">user</span><span class="o">.</span><span class="n">editor_publishers</span><span class="o">.</span><span class="n">set</span><span class="p">(</span><span class="n">publishers</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">user</span></div>
+</div>
+
+
+
+<span class="c1"># Login form</span>
+<span class="c1"># -----------</span>
+<div class="viewcode-block" id="CustomLoginForm">
+<a class="viewcode-back" href="../../good_to_know.html#good_to_know.forms.CustomLoginForm">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">CustomLoginForm</span><span class="p">(</span><span class="n">AuthenticationForm</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">"""Provide a customised login form for all user roles.</span>
+
+<span class="sd">    Extends Django's ``AuthenticationForm`` to support authentication</span>
+<span class="sd">    for readers, journalists and editors.</span>
+
+<span class="sd">    Customises the username and password input widgets by applying</span>
+<span class="sd">    Bootstrap styling and descriptive placeholder text.</span>
+
+<span class="sd">    All user roles access the application through the same login form.</span>
+<span class="sd">    """</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">"""Initialise the login form and customise input widgets.</span>
+
+<span class="sd">        Calls the parent authentication form initialisation method</span>
+<span class="sd">        before applying CSS classes and placeholder text to the</span>
+<span class="sd">        username and password fields.</span>
+
+<span class="sd">        :param args: Additional positional arguments passed to</span>
+<span class="sd">            the parent authentication form.</span>
+<span class="sd">        :param kwargs: Additional keyword arguments passed to</span>
+<span class="sd">            the parent authentication form.</span>
+<span class="sd">        :returns: None.</span>
+<span class="sd">        :rtype: None</span>
+<span class="sd">        """</span>
+
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">fields</span><span class="p">[</span><span class="s1">'username'</span><span class="p">]</span><span class="o">.</span><span class="n">widget</span><span class="o">.</span><span class="n">attrs</span><span class="o">.</span><span class="n">update</span><span class="p">({</span>
+            <span class="s1">'class'</span><span class="p">:</span> <span class="s1">'form-control'</span><span class="p">,</span>
+            <span class="s1">'placeholder'</span><span class="p">:</span> <span class="s1">'Enter your username'</span>
+        <span class="p">})</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">fields</span><span class="p">[</span><span class="s1">'password'</span><span class="p">]</span><span class="o">.</span><span class="n">widget</span><span class="o">.</span><span class="n">attrs</span><span class="o">.</span><span class="n">update</span><span class="p">({</span>
+            <span class="s1">'class'</span><span class="p">:</span> <span class="s1">'form-control'</span><span class="p">,</span>
+            <span class="s1">'placeholder'</span><span class="p">:</span> <span class="s1">'Enter your password'</span>
+        <span class="p">})</span></div>
+
+
+
+<span class="c1"># Article form</span>
+<span class="c1"># ------------</span>
+<div class="viewcode-block" id="ArticleForm">
+<a class="viewcode-back" href="../../good_to_know.html#good_to_know.forms.ArticleForm">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">ArticleForm</span><span class="p">(</span><span class="n">forms</span><span class="o">.</span><span class="n">ModelForm</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">"""Provide a form for creating and editing news articles.</span>
+
+<span class="sd">    Extends Django's ``ModelForm`` to handle article creation</span>
+<span class="sd">    and editing by journalists and editors.</span>
+
+<span class="sd">    The form allows users to enter an article title and content,</span>
+<span class="sd">    upload an optional image and select an associated publisher.</span>
+
+<span class="sd">    Publisher selection is controlled according to the user's role.</span>
+
+<span class="sd">    Journalists can only select publishers with which they are</span>
+<span class="sd">    affiliated. Publisher selection is optional for journalists,</span>
+<span class="sd">    allowing independent publication.</span>
+
+<span class="sd">    Editors can only select publishers assigned to their accounts.</span>
+<span class="sd">    Publisher selection is mandatory for editors.</span>
+
+<span class="sd">    """</span>
+
+<div class="viewcode-block" id="ArticleForm.Meta">
+<a class="viewcode-back" href="../../good_to_know.html#good_to_know.forms.ArticleForm.Meta">[docs]</a>
+    <span class="k">class</span><span class="w"> </span><span class="nc">Meta</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">"""Define the article model and form presentation settings."""</span>
+
+        <span class="n">model</span> <span class="o">=</span> <span class="n">Article</span>
+
+        <span class="n">fields</span> <span class="o">=</span> <span class="p">[</span>
+            <span class="s1">'title'</span><span class="p">,</span>
+            <span class="s1">'content'</span><span class="p">,</span>
+            <span class="s1">'image'</span><span class="p">,</span>
+            <span class="s1">'publisher'</span><span class="p">,</span>
+        <span class="p">]</span>
+
+        <span class="n">labels</span> <span class="o">=</span> <span class="p">{</span>
+            <span class="s1">'title'</span><span class="p">:</span> <span class="s1">'Article Title'</span><span class="p">,</span>
+            <span class="s1">'content'</span><span class="p">:</span> <span class="s1">'Article Content'</span><span class="p">,</span>
+            <span class="s1">'image'</span><span class="p">:</span> <span class="s1">'Upload an Image'</span><span class="p">,</span>
+            <span class="s1">'publisher'</span><span class="p">:</span> <span class="s1">'Publisher'</span><span class="p">,</span>
+        <span class="p">}</span>
+
+        <span class="n">help_texts</span> <span class="o">=</span> <span class="p">{</span>
+            <span class="s1">'publisher'</span><span class="p">:</span> <span class="p">(</span>
+                <span class="s1">'Select a publisher you are affiliated with. '</span>
+                <span class="s1">'Leave blank if you are an independent journalist.'</span>
+            <span class="p">),</span>
+            <span class="s1">'image'</span><span class="p">:</span> <span class="s1">'Optional: Upload an image to accompany your article.'</span><span class="p">,</span>
+        <span class="p">}</span>
+
+        <span class="n">widgets</span> <span class="o">=</span> <span class="p">{</span>
+            <span class="s1">'title'</span><span class="p">:</span> <span class="n">forms</span><span class="o">.</span><span class="n">TextInput</span><span class="p">(</span><span class="n">attrs</span><span class="o">=</span><span class="p">{</span>
+                <span class="s1">'class'</span><span class="p">:</span> <span class="s1">'form-control'</span><span class="p">,</span>
+                <span class="s1">'placeholder'</span><span class="p">:</span> <span class="s1">'Enter article title'</span><span class="p">,</span>
+            <span class="p">}),</span>
+
+            <span class="s1">'content'</span><span class="p">:</span> <span class="n">forms</span><span class="o">.</span><span class="n">Textarea</span><span class="p">(</span><span class="n">attrs</span><span class="o">=</span><span class="p">{</span>
+                <span class="s1">'class'</span><span class="p">:</span> <span class="s1">'form-control'</span><span class="p">,</span>
+                <span class="s1">'rows'</span><span class="p">:</span> <span class="mi">10</span><span class="p">,</span>
+                <span class="s1">'placeholder'</span><span class="p">:</span> <span class="s1">'Write your article here...'</span><span class="p">,</span>
+            <span class="p">}),</span>
+
+            <span class="s1">'image'</span><span class="p">:</span> <span class="n">forms</span><span class="o">.</span><span class="n">ClearableFileInput</span><span class="p">(</span><span class="n">attrs</span><span class="o">=</span><span class="p">{</span>
+                <span class="s1">'class'</span><span class="p">:</span> <span class="s1">'form-control'</span><span class="p">,</span>
+            <span class="p">}),</span>
+
+            <span class="s1">'publisher'</span><span class="p">:</span> <span class="n">forms</span><span class="o">.</span><span class="n">Select</span><span class="p">(</span><span class="n">attrs</span><span class="o">=</span><span class="p">{</span>
+                <span class="s1">'class'</span><span class="p">:</span> <span class="s1">'form-select'</span><span class="p">,</span>
+            <span class="p">}),</span>
+        <span class="p">}</span></div>
+
+
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">"""Initialise the article form and configure publisher choices.</span>
+
+<span class="sd">        Extracts the optional user argument before calling the parent</span>
+<span class="sd">        ``ModelForm`` initialisation method.</span>
+
+<span class="sd">        Publisher choices are restricted according to the user's role.</span>
+
+<span class="sd">        For journalists, the available publishers are limited to</span>
+<span class="sd">        those associated with their accounts. Publisher selection</span>
+<span class="sd">        is optional, allowing independent articles.</span>
+
+<span class="sd">        For editors, the available publishers are limited to those</span>
+<span class="sd">        assigned to their accounts. Publisher selection is mandatory.</span>
+
+<span class="sd">        :param args: Additional positional arguments passed to</span>
+<span class="sd">            the parent model form.</span>
+<span class="sd">        :param kwargs: Additional keyword arguments, including</span>
+<span class="sd">            the optional user instance.</span>
+<span class="sd">        :returns: None.</span>
+<span class="sd">        :rtype: None</span>
+<span class="sd">        """</span>
+
+        <span class="n">user</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s1">'user'</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">user</span> <span class="ow">and</span> <span class="n">user</span><span class="o">.</span><span class="n">role</span> <span class="o">==</span> <span class="n">CustomUser</span><span class="o">.</span><span class="n">Role</span><span class="o">.</span><span class="n">JOURNALIST</span><span class="p">:</span>
+
+            <span class="bp">self</span><span class="o">.</span><span class="n">fields</span><span class="p">[</span><span class="s1">'publisher'</span><span class="p">]</span><span class="o">.</span><span class="n">queryset</span> <span class="o">=</span> <span class="p">(</span>
+                <span class="n">user</span><span class="o">.</span><span class="n">publishers</span><span class="o">.</span><span class="n">all</span><span class="p">()</span>
+            <span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">fields</span><span class="p">[</span><span class="s1">'publisher'</span><span class="p">]</span><span class="o">.</span><span class="n">required</span> <span class="o">=</span> <span class="kc">False</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">fields</span><span class="p">[</span><span class="s1">'publisher'</span><span class="p">]</span><span class="o">.</span><span class="n">empty_label</span> <span class="o">=</span> <span class="p">(</span>
+                <span class="s2">"Publish independently (no publisher)"</span>
+            <span class="p">)</span>
+        <span class="k">elif</span> <span class="n">user</span> <span class="ow">and</span> <span class="n">user</span><span class="o">.</span><span class="n">role</span> <span class="o">==</span> <span class="n">CustomUser</span><span class="o">.</span><span class="n">Role</span><span class="o">.</span><span class="n">EDITOR</span><span class="p">:</span>
+
+            <span class="bp">self</span><span class="o">.</span><span class="n">fields</span><span class="p">[</span><span class="s1">'publisher'</span><span class="p">]</span><span class="o">.</span><span class="n">queryset</span> <span class="o">=</span> <span class="p">(</span>
+                <span class="n">user</span><span class="o">.</span><span class="n">editor_publishers</span><span class="o">.</span><span class="n">all</span><span class="p">()</span>
+            <span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">fields</span><span class="p">[</span><span class="s1">'publisher'</span><span class="p">]</span><span class="o">.</span><span class="n">required</span> <span class="o">=</span> <span class="kc">True</span></div>
+
+
+
+<span class="c1"># Newsletter form</span>
+<span class="c1"># ---------------</span>
+<div class="viewcode-block" id="NewsletterForm">
+<a class="viewcode-back" href="../../good_to_know.html#good_to_know.forms.NewsletterForm">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">NewsletterForm</span><span class="p">(</span><span class="n">forms</span><span class="o">.</span><span class="n">ModelForm</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">"""Provide a form for creating and editing newsletters.</span>
+
+<span class="sd">    Extends Django's ``ModelForm`` to support newsletter creation</span>
+<span class="sd">    and editing by journalists and editors.</span>
+
+<span class="sd">    Users can provide a newsletter title and description, select</span>
+<span class="sd">    an associated publisher and include multiple articles.</span>
+
+<span class="sd">    Available publishers and articles are filtered according</span>
+<span class="sd">    to the authenticated user's role.</span>
+
+<span class="sd">    Journalists can select publishers with which they are affiliated</span>
+<span class="sd">    and include approved articles written by themselves or</span>
+<span class="sd">    associated with their affiliated publishers.</span>
+
+<span class="sd">    Independent journalists can create newsletters using their</span>
+<span class="sd">    own approved articles without selecting a publisher.</span>
+
+<span class="sd">    Editors can only select publishers assigned to their accounts</span>
+<span class="sd">    and include approved articles belonging to those publishers.</span>
+
+<span class="sd">    The form also validates that all selected articles belong</span>
+<span class="sd">    to the selected publisher when a publisher is specified.</span>
+
+<span class="sd">    """</span>
+
+    <span class="n">publisher</span> <span class="o">=</span> <span class="n">forms</span><span class="o">.</span><span class="n">ModelChoiceField</span><span class="p">(</span>
+        <span class="n">queryset</span><span class="o">=</span><span class="n">Publisher</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">none</span><span class="p">(),</span>
+        <span class="n">required</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+        <span class="n">label</span><span class="o">=</span><span class="s2">"Select publisher"</span><span class="p">,</span>
+        <span class="n">empty_label</span><span class="o">=</span><span class="s2">"Choose a publisher (optional)"</span><span class="p">,</span>
+        <span class="n">widget</span><span class="o">=</span><span class="n">forms</span><span class="o">.</span><span class="n">Select</span><span class="p">(</span><span class="n">attrs</span><span class="o">=</span><span class="p">{</span>
+            <span class="s1">'class'</span><span class="p">:</span> <span class="s1">'form-select'</span><span class="p">,</span>
+        <span class="p">})</span>
+    <span class="p">)</span>
+
+<div class="viewcode-block" id="NewsletterForm.Meta">
+<a class="viewcode-back" href="../../good_to_know.html#good_to_know.forms.NewsletterForm.Meta">[docs]</a>
+    <span class="k">class</span><span class="w"> </span><span class="nc">Meta</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">"""Define the newsletter model and form presentation settings."""</span>
+
+        <span class="n">model</span> <span class="o">=</span> <span class="n">Newsletter</span>
+
+        <span class="n">fields</span> <span class="o">=</span> <span class="p">[</span>
+            <span class="s1">'title'</span><span class="p">,</span>
+            <span class="s1">'description'</span><span class="p">,</span>
+            <span class="s1">'publisher'</span><span class="p">,</span>
+            <span class="s1">'articles'</span><span class="p">,</span>
+        <span class="p">]</span>
+
+        <span class="n">widgets</span> <span class="o">=</span> <span class="p">{</span>
+            <span class="s1">'title'</span><span class="p">:</span> <span class="n">forms</span><span class="o">.</span><span class="n">TextInput</span><span class="p">(</span><span class="n">attrs</span><span class="o">=</span><span class="p">{</span>
+                <span class="s1">'class'</span><span class="p">:</span> <span class="s1">'form-control'</span><span class="p">,</span>
+                <span class="s1">'placeholder'</span><span class="p">:</span> <span class="s1">'Enter newsletter title'</span>
+            <span class="p">}),</span>
+
+            <span class="s1">'description'</span><span class="p">:</span> <span class="n">forms</span><span class="o">.</span><span class="n">Textarea</span><span class="p">(</span><span class="n">attrs</span><span class="o">=</span><span class="p">{</span>
+                <span class="s1">'class'</span><span class="p">:</span> <span class="s1">'form-control'</span><span class="p">,</span>
+                <span class="s1">'rows'</span><span class="p">:</span> <span class="mi">5</span><span class="p">,</span>
+                <span class="s1">'placeholder'</span><span class="p">:</span> <span class="s1">'Describe your newsletter'</span>
+            <span class="p">}),</span>
+
+            <span class="s1">'articles'</span><span class="p">:</span> <span class="n">forms</span><span class="o">.</span><span class="n">CheckboxSelectMultiple</span><span class="p">(</span>
+                    <span class="n">attrs</span><span class="o">=</span><span class="p">{</span>
+                        <span class="s1">'class'</span><span class="p">:</span> <span class="s1">'form-check-input'</span><span class="p">,</span>
+                    <span class="p">}</span>
+            <span class="p">),</span>
+        <span class="p">}</span></div>
+
+
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">"""Initialise the newsletter form and configure available choices.</span>
+
+<span class="sd">        Extracts the optional user argument before calling the parent</span>
+<span class="sd">        ``ModelForm`` initialisation method.</span>
+
+<span class="sd">        The available publishers and articles are filtered according</span>
+<span class="sd">        to the user's assigned role.</span>
+
+<span class="sd">        For journalists, the publisher queryset is restricted to</span>
+<span class="sd">        their affiliated publishers. Publisher selection remains</span>
+<span class="sd">        optional.</span>
+
+<span class="sd">        Journalists can select approved articles that they authored</span>
+<span class="sd">        or articles associated with their affiliated publishers.</span>
+
+<span class="sd">        For editors, the publisher queryset is restricted to</span>
+<span class="sd">        their assigned publishers. Publisher selection is mandatory.</span>
+
+<span class="sd">        Editors can only select approved articles belonging to</span>
+<span class="sd">        their assigned publishers.</span>
+
+<span class="sd">        :param args: Additional positional arguments passed to</span>
+<span class="sd">            the parent model form.</span>
+<span class="sd">        :param kwargs: Additional keyword arguments, including</span>
+<span class="sd">            the optional user instance.</span>
+<span class="sd">        :returns: None.</span>
+<span class="sd">        :rtype: None</span>
+<span class="sd">        """</span>
+
+        <span class="n">user</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s1">'user'</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">user</span> <span class="ow">and</span> <span class="n">user</span><span class="o">.</span><span class="n">role</span> <span class="o">==</span> <span class="n">CustomUser</span><span class="o">.</span><span class="n">Role</span><span class="o">.</span><span class="n">JOURNALIST</span><span class="p">:</span>
+
+            <span class="bp">self</span><span class="o">.</span><span class="n">fields</span><span class="p">[</span><span class="s1">'publisher'</span><span class="p">]</span><span class="o">.</span><span class="n">queryset</span> <span class="o">=</span> <span class="p">(</span>
+                <span class="n">user</span><span class="o">.</span><span class="n">publishers</span><span class="o">.</span><span class="n">all</span><span class="p">()</span>
+            <span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">fields</span><span class="p">[</span><span class="s1">'publisher'</span><span class="p">]</span><span class="o">.</span><span class="n">required</span> <span class="o">=</span> <span class="kc">False</span>
+
+            <span class="bp">self</span><span class="o">.</span><span class="n">fields</span><span class="p">[</span><span class="s1">'articles'</span><span class="p">]</span><span class="o">.</span><span class="n">queryset</span> <span class="o">=</span> <span class="p">(</span>
+                <span class="n">Article</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span>
+                    <span class="n">Q</span><span class="p">(</span><span class="n">author</span><span class="o">=</span><span class="n">user</span><span class="p">)</span> <span class="o">|</span>
+                    <span class="n">Q</span><span class="p">(</span><span class="n">publisher__in</span><span class="o">=</span><span class="n">user</span><span class="o">.</span><span class="n">publishers</span><span class="o">.</span><span class="n">all</span><span class="p">()),</span>
+                    <span class="n">approved</span><span class="o">=</span><span class="kc">True</span>
+                <span class="p">)</span><span class="o">.</span><span class="n">distinct</span><span class="p">()</span><span class="o">.</span><span class="n">order_by</span><span class="p">(</span><span class="s1">'-created_at'</span><span class="p">)</span>
+            <span class="p">)</span>
+        <span class="k">elif</span> <span class="n">user</span> <span class="ow">and</span> <span class="n">user</span><span class="o">.</span><span class="n">role</span> <span class="o">==</span> <span class="n">CustomUser</span><span class="o">.</span><span class="n">Role</span><span class="o">.</span><span class="n">EDITOR</span><span class="p">:</span>
+
+            <span class="bp">self</span><span class="o">.</span><span class="n">fields</span><span class="p">[</span><span class="s1">'publisher'</span><span class="p">]</span><span class="o">.</span><span class="n">queryset</span> <span class="o">=</span> <span class="p">(</span>
+                <span class="n">user</span><span class="o">.</span><span class="n">editor_publishers</span><span class="o">.</span><span class="n">all</span><span class="p">()</span>
+            <span class="p">)</span>
+
+            <span class="bp">self</span><span class="o">.</span><span class="n">fields</span><span class="p">[</span><span class="s1">'publisher'</span><span class="p">]</span><span class="o">.</span><span class="n">required</span> <span class="o">=</span> <span class="kc">True</span>
+
+            <span class="bp">self</span><span class="o">.</span><span class="n">fields</span><span class="p">[</span><span class="s1">'articles'</span><span class="p">]</span><span class="o">.</span><span class="n">queryset</span> <span class="o">=</span> <span class="p">(</span>
+                <span class="n">Article</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span>
+                    <span class="n">publisher__in</span><span class="o">=</span><span class="n">user</span><span class="o">.</span><span class="n">editor_publishers</span><span class="o">.</span><span class="n">all</span><span class="p">(),</span>
+                    <span class="n">approved</span><span class="o">=</span><span class="kc">True</span>
+                <span class="p">)</span><span class="o">.</span><span class="n">order_by</span><span class="p">(</span><span class="s1">'-created_at'</span><span class="p">)</span>
+            <span class="p">)</span>
+
+<div class="viewcode-block" id="NewsletterForm.clean">
+<a class="viewcode-back" href="../../good_to_know.html#good_to_know.forms.NewsletterForm.clean">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">clean</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">"""Validate the relationship between the publisher and articles.</span>
+
+<span class="sd">        Retrieves the selected publisher and articles from the</span>
+<span class="sd">        cleaned form data.</span>
+
+<span class="sd">        If a publisher has been selected, verifies that every</span>
+<span class="sd">        selected article belongs to that publisher.</span>
+
+<span class="sd">        An error is added to the articles field if any selected</span>
+<span class="sd">        article belongs to a different publisher.</span>
+
+<span class="sd">        :returns: The validated form data.</span>
+<span class="sd">        :rtype: dict</span>
+<span class="sd">        """</span>
+
+        <span class="n">cleaned_data</span> <span class="o">=</span> <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">clean</span><span class="p">()</span>
+
+        <span class="n">publisher</span> <span class="o">=</span> <span class="n">cleaned_data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">'publisher'</span><span class="p">)</span>
+        <span class="n">articles</span> <span class="o">=</span> <span class="n">cleaned_data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">'articles'</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">publisher</span> <span class="ow">and</span> <span class="n">articles</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">articles</span><span class="o">.</span><span class="n">exclude</span><span class="p">(</span><span class="n">publisher</span><span class="o">=</span><span class="n">publisher</span><span class="p">)</span><span class="o">.</span><span class="n">exists</span><span class="p">():</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">add_error</span><span class="p">(</span>
+                    <span class="s1">'articles'</span><span class="p">,</span>
+                    <span class="s1">'Selected articles must belong to the selected publisher.'</span>
+                <span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">cleaned_data</span></div>
+</div>
+
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2026, Leah Campbell.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

@@ -23,9 +23,6 @@ class ReaderRegistrationForm(UserCreationForm):
     The user's role is automatically assigned as ``READER``
     when the account is saved.
 
-    Attributes:
-        Meta.model: The custom user model used for registration.
-        Meta.fields: The fields displayed in the registration form.
     """
 
     class Meta:
@@ -80,12 +77,6 @@ class JournalistRegistrationForm(UserCreationForm):
     Publisher affiliations are stored using the user model's
     many-to-many relationship.
 
-    Attributes:
-        journalist_publisher: An optional multiple-choice field
-            allowing journalists to select their associated publishers.
-
-        Meta.model: The custom user model used for registration.
-        Meta.fields: The fields displayed in the registration form.
     """
 
     journalist_publisher = forms.ModelMultipleChoiceField(
@@ -167,18 +158,6 @@ class EditorRegistrationForm(UserCreationForm):
 
     Publisher names are checked to prevent duplicate registrations.
 
-    Attributes:
-        editor_publishers: An optional multiple-choice field
-            allowing editors to select existing publishers.
-
-        publisher_name: An optional text field used to specify
-            the name of a new publisher.
-
-        publisher_description: An optional text area used to
-            provide a description of a new publisher.
-
-        Meta.model: The custom user model used for registration.
-        Meta.fields: The fields displayed in the registration form.
     """
 
     editor_publishers = forms.ModelMultipleChoiceField(
@@ -387,13 +366,6 @@ class ArticleForm(forms.ModelForm):
     Editors can only select publishers assigned to their accounts.
     Publisher selection is mandatory for editors.
 
-    Attributes:
-        Meta.model: The article model associated with the form.
-        Meta.fields: The model fields included in the form.
-        Meta.labels: Custom labels displayed alongside form fields.
-        Meta.help_texts: Additional guidance displayed to users.
-        Meta.widgets: Custom widgets and HTML attributes used
-            to render the form fields.
     """
 
     class Meta:
@@ -514,14 +486,6 @@ class NewsletterForm(forms.ModelForm):
     The form also validates that all selected articles belong
     to the selected publisher when a publisher is specified.
 
-    Attributes:
-        publisher: An optional model choice field allowing users
-            to select an associated publisher.
-
-        Meta.model: The newsletter model associated with the form.
-        Meta.fields: The model fields included in the form.
-        Meta.widgets: Custom widgets and HTML attributes used
-            to render the form fields.
     """
 
     publisher = forms.ModelChoiceField(
