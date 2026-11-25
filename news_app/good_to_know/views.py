@@ -1,3 +1,4 @@
+
 # Views functions are largely developed and adapted from the
 # previous eCommerce project.
 
@@ -58,34 +59,65 @@ User = get_user_model()
 
 
 # Role checks
-'''
-The following functions provide role checks for later functions
-'''
+# ===========
+#
+# The following functions provide role checks for use by other
+# view functions and access-control decorators.
 
 
 def is_reader(user):
+    """Check whether the user is an authenticated reader.
+
+    :param user: The user whose role is being checked.
+    :type user: CustomUser
+    :returns: ``True`` if the user is authenticated and has the reader role;
+        otherwise, ``False``.
+    :rtype: bool
+    """
     return user.is_authenticated and user.role == CustomUser.Role.READER
 
 
 def is_journalist(user):
+    """Check whether the user is an authenticated journalist.
+
+    :param user: The user whose role is being checked.
+    :type user: CustomUser
+    :returns: ``True`` if the user is authenticated and has the journalist
+        role; otherwise, ``False``.
+    :rtype: bool
+    """
     return user.is_authenticated and user.role == CustomUser.Role.JOURNALIST
 
 
 def is_editor(user):
+    """Check whether the user is an authenticated editor.
+
+    :param user: The user whose role is being checked.
+    :type user: CustomUser
+    :returns: ``True`` if the user is authenticated and has the editor role;
+        otherwise, ``False``.
+    :rtype: bool
+    """
     return user.is_authenticated and user.role == CustomUser.Role.EDITOR
 
 
 # Registration
-'''
-    Functions register users according to role and return success messages.
-    These functions require no authentication or login as they are
-    public facing
-'''
+# ============
+#
+# The following functions register users according to their assigned roles
+# and return success messages. These functions are publicly accessible
+# and do not require authentication.
 
 
-# Reader register
+# Reader registration
+# -------------------
 def register_reader(request):
-    ''' Function handles reader registration'''
+    """Register a new reader account.
+
+    Handles reader registration using the reader registration form.
+    On successful submission, the user is created, logged in, and
+    redirected to the login page.
+    """
     if request.method == 'POST':
         form = ReaderRegistrationForm(request.POST)
 
@@ -108,9 +140,15 @@ def register_reader(request):
     )
 
 
-# Register journalist
+# Journalist registration
+# -----------------------
 def register_journalist(request):
-    ''' Function handles journalist registration'''
+    """Register a new journalist account.
+
+    Handles journalist registration using the journalist registration form.
+    On successful submission, the account is created, the user is logged in,
+    and the user is redirected to the login page.
+    """
     if request.method == 'POST':
         form = JournalistRegistrationForm(request.POST)
 
@@ -136,9 +174,14 @@ def register_journalist(request):
 
 
 # Editor registration
+# -------------------
 def register_editor(request):
-    ''' Function handles editor registration'''
+    """Register a new editor account.
 
+    Handles editor registration using the editor registration form.
+    On successful submission, the account is created and the user
+    is redirected to the login page.
+    """
     if request.method == 'POST':
         form = EditorRegistrationForm(request.POST)
 
@@ -163,30 +206,51 @@ def register_editor(request):
 
 
 # Welcome, login, logout and home pages
-'''
-    The welcome page served as the public facing initial
-    landing page for the app.
-    The login functions utilise the custom user settings.
-    The same login can therefore be used for all roles.
-    Users are redirected to home where the latest news is
-    presented.
-'''
+# =====================================
+#
+# The welcome page serves as the public-facing landing page for the
+# application.
+#
+# The login functionality uses the custom user model, allowing users
+# with different roles to authenticate through the same login page.
+#
+# Following successful authentication, users are redirected to the
+# appropriate home page or dashboard according to their assigned role.
 
 
 # Welcome page
+# ------------
 def welcome(request):
-    ''' Directs program to display welcome page'''
+    """Display the public welcome page.
+
+    Renders the welcome page template for visitors accessing the
+    application.
+    """
     return render(request, 'good_to_know/welcome.html')
 
 
 # Login
+# -----
 class RoleBasedLoginView(LoginView):
-    ''' Login view is displayed for al users'''
+    """Provide role-based user authentication.
+
+    Uses the custom login form to authenticate users across all
+    application roles. Following successful authentication, users
+    are redirected to the appropriate page according to their role.
+    """
 
     template_name = 'good_to_know/login.html'
     authentication_form = CustomLoginForm
 
     def get_success_url(self):
+        """Determine the post-login redirect URL.
+
+        Returns a different destination depending on the authenticated
+        user's assigned role.
+
+        :returns: The URL of the appropriate home page or dashboard.
+        :rtype: str
+        """
 
         user = self.request.user
 
@@ -203,18 +267,34 @@ class RoleBasedLoginView(LoginView):
 
 
 # Logout
+# ------
 @login_required
 def logout_user(request):
-    ''' Logout function returns user to welcome page'''
+    """Log out the authenticated user.
+
+    Ends the current user's authenticated session and redirects them
+    to the public welcome page.
+
+    :param request: The HTTP request received from the authenticated user.
+    :type request: HttpRequest
+    :returns: A redirect response to the welcome page.
+    :rtype: HttpResponseRedirect
+    """
     logout(request)
     return redirect('welcome')
 
 
 # Home page
+# ---------
 def home(request):
-    ''' The home view directs users to home page, which displays
-        publications.
-    '''
+    """Display the application home page.
+
+    Retrieves and displays approved articles and newsletters.
+    Articles are ordered by creation date, with the most recent
+    publications displayed first. Related authors, publishers,
+    and newsletter articles are retrieved to support efficient
+    template rendering.
+    """
 
     articles = Article.objects.filter(
         approved=True
@@ -239,20 +319,39 @@ def home(request):
 
 
 # Publication details
-'''
-    The following programs form the skeleton requirements for the details
-    for each publication.
-    Both are frequently linked across the application.
-    Newsletters are structured to contain multiple items.
-'''
+# ===================
+#
+# The following views provide the functionality required to display
+# individual publication details.
+#
+# Both views are linked throughout the application. Newsletters are
+# structured to contain multiple articles, whereas each article is
+# displayed individually.
 
 
 # Article detail
+# --------------
 @login_required
 def article_detail(request, article_id):
-    ''' Function handles the display of article details for all
-        logged in users
-    '''
+    """Display the details of an individual article.
+
+    Retrieves an article using its ID and displays its details to
+    authenticated users.
+
+    Approved articles are accessible to all authenticated users.
+    Unapproved articles can only be accessed by their journalist
+    author or an editor associated with the article's publisher.
+    Users without the required permissions are denied access.
+
+    :param request: The HTTP request received from the authenticated user.
+    :type request: HttpRequest
+    :param article_id: The unique identifier of the article.
+    :type article_id: int
+    :raises PermissionDenied: If the user does not have permission to
+        access an unapproved article.
+    :returns: A rendered response containing the article details.
+    :rtype: HttpResponse
+    """
     article = get_object_or_404(
         Article.objects.select_related(
             'author', 'publisher'
@@ -282,9 +381,29 @@ def article_detail(request, article_id):
 
 
 # Newsletter detail
+# -----------------
 @login_required
 def newsletter_detail(request, newsletter_id):
-    ''' Function handles the display of newsletters'''
+    """Display the details of an individual newsletter.
+
+    Retrieves a newsletter using its ID and displays its details,
+    together with its approved articles.
+
+    Approved newsletters are accessible to all authenticated users.
+    Unapproved newsletters can only be accessed by their journalist
+    author or an editor associated with the newsletter's publisher.
+    Users without the required permissions are denied access.
+
+    :param request: The HTTP request received from the authenticated user.
+    :type request: HttpRequest
+    :param newsletter_id: The unique identifier of the newsletter.
+    :type newsletter_id: int
+    :raises PermissionDenied: If the user does not have permission to
+        access an unapproved newsletter.
+    :returns: A rendered response containing the newsletter details
+        and its approved articles.
+    :rtype: HttpResponse
+    """
     newsletter = get_object_or_404(
         Newsletter.objects.select_related(
             'author'
@@ -318,21 +437,38 @@ def newsletter_detail(request, newsletter_id):
 
 
 # Dashboards
-'''
-    Dashboards are formulated for: readers, journalists and editors.
-    Reader dashboards with display their subscriptions.
-    Journalist dashboards will contain their publications, both approved
-    and pending approval.
-    Editor dashboards show publications awaiting approval, as well as
-    publications belonging to their publisher.
-'''
+# ==========
+#
+# The application provides separate dashboards for readers, journalists
+# and editors.
+#
+# The reader dashboard displays the publishers and journalists to which
+# the reader has subscribed.
+#
+# The journalist dashboard displays the journalist's own publications,
+# including both approved and pending articles and newsletters.
+#
+# The editor dashboard displays publications awaiting approval, as well
+# as approved publications associated with the editor's publishers.
 
 
 # Reader dashboard
+# ----------------
 @login_required
 @user_passes_test(is_reader)
 def reader_dashboard(request):
-    ''' Reader dashboard displays subscribed journalists and publishers. '''
+    """Display the reader dashboard.
+
+    Retrieves and displays the publishers and journalists to which
+    the authenticated reader has subscribed.
+
+    Access is restricted to authenticated users with the reader role.
+
+    :param request: The HTTP request received from the authenticated user.
+    :type request: HttpRequest
+    :returns: A rendered response containing the reader's subscriptions.
+    :rtype: HttpResponse
+    """
 
     publishers = request.user.subscribed_publishers.all()
 
@@ -349,10 +485,25 @@ def reader_dashboard(request):
 
 
 # Journalist dashboard
+# --------------------
 @login_required
 @user_passes_test(is_journalist)
 def journalist_dashboard(request):
-    ''' Journalist dashboard displays journalists own work. '''
+    """Display the journalist dashboard.
+
+    Retrieves and displays articles and newsletters belonging to
+    the authenticated journalist. Publications are ordered by
+    creation date, with the most recent displayed first.
+
+    Both approved and pending publications are included.
+
+    Access is restricted to authenticated users with the journalist role.
+
+    :param request: The HTTP request received from the authenticated user.
+    :type request: HttpRequest
+    :returns: A rendered response containing the journalist's publications.
+    :rtype: HttpResponse
+    """
 
     articles = Article.objects.filter(
         author=request.user
@@ -375,13 +526,30 @@ def journalist_dashboard(request):
 
 
 # Editor dashboard
-
+# ----------------
 @login_required
 @user_passes_test(is_editor)
 def editor_dashboard(request):
-    ''' Editor dashboard displays work submitted for approval and
-        approved publications. Editors are able to manage publishers.
-    '''
+    """Display the editor dashboard.
+
+    Retrieves articles and newsletters associated with the
+    authenticated editor's publishers.
+
+    Publications are separated into pending and approved categories
+    to allow editors to review submissions and manage existing
+    publications.
+
+    The dashboard also displays the publishers associated with
+    the authenticated editor.
+
+    Access is restricted to authenticated users with the editor role.
+
+    :param request: The HTTP request received from the authenticated user.
+    :type request: HttpRequest
+    :returns: A rendered response containing the editor's publications,
+        approval categories and associated publishers.
+    :rtype: HttpResponse
+    """
 
     articles = list(
         editor_articles(request.user)
@@ -429,6 +597,7 @@ def editor_dashboard(request):
 
 
 # Create publisher
+# ----------------
 @login_required
 @user_passes_test(is_editor)
 @permission_required(
@@ -436,7 +605,26 @@ def editor_dashboard(request):
     raise_exception=True
 )
 def create_publisher(request):
-    ''' Editors create publishers. '''
+    """Create a new publisher.
+
+    Allows authenticated editors with the required publisher creation
+    permission to create a publisher.
+
+    The submitted publisher name is validated to ensure that it is
+    not empty or already in use. Publisher creation is performed
+    within an atomic database transaction, and the newly created
+    publisher is associated with the editor.
+
+    Success and error messages are displayed according to the
+    outcome of the operation. If an exception occurs, the failure
+    is recorded in the application log.
+
+    :param request: The HTTP request received from the authenticated editor.
+    :type request: HttpRequest
+    :returns: A redirect response following successful creation, or a
+        rendered response containing the publisher creation form.
+    :rtype: HttpResponse
+    """
 
     if request.method == 'POST':
 
@@ -493,26 +681,46 @@ def create_publisher(request):
     )
 
 
-# Journalist Article and newsletter management
-'''
-    Journalist article abilities are restricted to creating, editing and
-    deleting. However independent journalists are able to self approve as
-    they aren't affiliated with publishers. This is made explicit in the
-    reader's view.
-
-    Functions to edit and delete publications are different for journalists
-    and editors. This is to simplify permission allocation for later
-    programs including API's.
-'''
+# Journalist article and newsletter management
+# =============================================
+#
+# Journalists can create, edit and delete their own articles and
+# newsletters.
+#
+# Independent journalists can self-approve their publications because
+# they are not affiliated with a publisher. Publications associated
+# with a publisher require editorial approval.
+#
+# Article and newsletter management functions are separated according
+# to user role. This approach simplifies permission allocation and
+# supports the implementation of additional functionality, including
+# API endpoints.
 
 
 # Create article
+# --------------
 @login_required
 @user_passes_test(is_journalist)
 def create_article(request):
-    ''' Journalists create articles which can be affiliated with a publisher
-        or independent. Articles with selected publishers will require approval
-    '''
+    """Create a new article.
+
+    Allows authenticated journalists to create articles using the
+    article submission form.
+
+    Articles can be submitted independently or associated with a
+    publisher. Articles associated with a publisher require editorial
+    approval, whereas independent articles are automatically approved.
+
+    Following successful submission, the journalist is redirected
+    to their dashboard.
+
+    :param request: The HTTP request received from the authenticated
+        journalist.
+    :type request: HttpRequest
+    :returns: A redirect response following successful article creation,
+        or a rendered response containing the article submission form.
+    :rtype: HttpResponse
+    """
 
     if request.method == 'POST':
 
@@ -556,13 +764,32 @@ def create_article(request):
 
 
 # Journalist edit article
+# -----------------------
 @login_required
 @user_passes_test(is_journalist)
 def edit_article(request, article_id):
-    ''' Function handles article editing. If affiliated with a publisher
-        an edited article will require approval again.
-    '''
+    """Edit an existing article.
 
+    Allows authenticated journalists to edit articles that they have
+    authored. The article is retrieved using its unique identifier
+    and the authenticated user's ownership.
+
+    Edited articles associated with a publisher require fresh
+    editorial approval. Independently published articles remain
+    automatically approved.
+
+    Following a successful update, the journalist is redirected
+    to their dashboard.
+
+    :param request: The HTTP request received from the authenticated
+        journalist.
+    :type request: HttpRequest
+    :param article_id: The unique identifier of the article to edit.
+    :type article_id: int
+    :returns: A redirect response following a successful update, or
+        a rendered response containing the article editing form.
+    :rtype: HttpResponse
+    """
     article = get_object_or_404(
         Article,
         id=article_id,
@@ -608,11 +835,29 @@ def edit_article(request, article_id):
 
 
 # Delete article
+# --------------
 @login_required
 @user_passes_test(is_journalist)
 @require_POST
 def delete_article(request, article_id):
-    ''' Function handles article deletion'''
+    """Delete an existing article.
+
+    Allows authenticated journalists to delete articles that they
+    have authored. The article is retrieved using its unique
+    identifier and the authenticated user's ownership.
+
+    The deletion operation is restricted to POST requests.
+    Following successful deletion, a confirmation message is
+    displayed and the journalist is redirected to their dashboard.
+
+    :param request: The HTTP POST request received from the
+        authenticated journalist.
+    :type request: HttpRequest
+    :param article_id: The unique identifier of the article to delete.
+    :type article_id: int
+    :returns: A redirect response to the journalist dashboard.
+    :rtype: HttpResponseRedirect
+    """
 
     article = get_object_or_404(
         Article,
@@ -631,11 +876,36 @@ def delete_article(request, article_id):
 
 
 # Journalist create newsletter
+# -----------------------------
 @login_required
 @user_passes_test(is_journalist)
 def create_newsletter(request):
-    ''' Function handles newsletter creation. independent journalists
-        can also create newsletters, using their own articles.'''
+    """Create a new newsletter.
+
+    Allows authenticated journalists to create newsletters using
+    the newsletter submission form.
+
+    Both independent journalists and journalists affiliated with
+    publishers can create newsletters using their own articles.
+    Newsletters associated with a publisher require editorial
+    approval, whereas independent newsletters are automatically
+    approved.
+
+    Newsletter creation and the association of articles are
+    performed within an atomic database transaction.
+
+    Following successful creation, the journalist is redirected
+    to the newsletter detail page. If an exception occurs during
+    creation, an error message is displayed.
+
+    :param request: The HTTP request received from the authenticated
+        journalist.
+    :type request: HttpRequest
+    :returns: A redirect response following successful newsletter
+        creation, or a rendered response containing the newsletter
+        submission form.
+    :rtype: HttpResponse
+    """
 
     if request.method == 'POST':
 
@@ -684,11 +954,33 @@ def create_newsletter(request):
 
 
 # Journalist edit newsletter
+# --------------------------
 @login_required
 @user_passes_test(is_journalist)
 def edit_newsletter(request, newsletter_id):
-    ''' Newsletters can be edited before approval if newsletter
-        is affiliated with a publisher'''
+    """Edit an existing newsletter.
+
+    Allows authenticated journalists to edit newsletters that they
+    have authored. The newsletter is retrieved using its unique
+    identifier and the authenticated user's ownership.
+
+    Newsletters associated with a publisher require fresh editorial
+    approval following an update. Independent newsletters remain
+    automatically approved.
+
+    Following a successful update, the journalist is redirected
+    to their dashboard.
+
+    :param request: The HTTP request received from the authenticated
+        journalist.
+    :type request: HttpRequest
+    :param newsletter_id: The unique identifier of the newsletter
+        to edit.
+    :type newsletter_id: int
+    :returns: A redirect response following a successful update,
+        or a rendered response containing the newsletter editing form.
+    :rtype: HttpResponse
+    """
 
     newsletter = get_object_or_404(
         Newsletter,
@@ -734,11 +1026,30 @@ def edit_newsletter(request, newsletter_id):
 
 
 # Journalist delete newsletter
+# ----------------------------
 @login_required
 @user_passes_test(is_journalist)
 @require_POST
 def delete_newsletter(request, newsletter_id):
-    ''' Function handles newsletter deletion. '''
+    """Delete an existing newsletter.
+
+    Allows authenticated journalists to delete newsletters that
+    they have authored. The newsletter is retrieved using its
+    unique identifier and the authenticated user's ownership.
+
+    The deletion operation is restricted to POST requests.
+    Following successful deletion, a confirmation message is
+    displayed and the journalist is redirected to their dashboard.
+
+    :param request: The HTTP POST request received from the
+        authenticated journalist.
+    :type request: HttpRequest
+    :param newsletter_id: The unique identifier of the newsletter
+        to delete.
+    :type newsletter_id: int
+    :returns: A redirect response to the journalist dashboard.
+    :rtype: HttpResponseRedirect
+    """
 
     newsletter = get_object_or_404(
         Newsletter,
@@ -757,19 +1068,40 @@ def delete_newsletter(request, newsletter_id):
 
 
 # Editor article management
-'''
-    Article and newsletter affiliation with the editor's publisher is
-    defined to make further checking efficient.
-    Editor's can edit, approve and delete publications. As according
-    to the specification, creation is done by journalists.
-    Upon approval of publications, they're issued to subscribers via email.
-    For the purpose of this task, emails also appear in console.
-'''
+# =========================
+#
+# Article and newsletter affiliation with an editor's publisher is
+# established to support efficient filtering and permission checks.
+#
+# Editors are responsible for editing, approving and deleting
+# publications. In accordance with the application requirements,
+# publication creation is restricted to journalists.
+#
+# Once publications have been approved, they are distributed to
+# subscribers by email. For the purposes of this application,
+# email output is also displayed in the console.
 
 
 # Content filter
+# --------------
 def editor_articles(user):
-    ''' Function handles filtering of editors articles for dashboard view. '''
+    """Retrieve articles associated with an editor's publishers.
+
+    Filters articles according to the publishers assigned to the
+    specified editor. This function supports the editor dashboard
+    and other editor-specific publication management operations.
+
+    A permission exception is raised if the editor has no assigned
+    publishers.
+
+    :param user: The editor whose associated publishers are used
+        to filter the articles.
+    :type user: CustomUser
+    :raises PermissionDenied: If the editor has no assigned publisher.
+    :returns: A queryset containing articles associated with the
+        editor's publishers.
+    :rtype: QuerySet
+    """
 
     publishers = user.editor_publishers.all()
 
@@ -784,7 +1116,23 @@ def editor_articles(user):
 
 
 def editor_newsletters(user):
-    ''' Function handles filtering editor newsletters for viewing'''
+    """Retrieve newsletters associated with an editor's publishers.
+
+    Filters newsletters according to the publishers assigned to the
+    specified editor. This function supports newsletter filtering
+    and editor-specific publication management.
+
+    A permission exception is raised if the editor has no assigned
+    publishers.
+
+    :param user: The editor whose associated publishers are used
+        to filter the newsletters.
+    :type user: CustomUser
+    :raises PermissionDenied: If the editor has no assigned publisher.
+    :returns: A queryset containing newsletters associated with
+        the editor's publishers.
+    :rtype: QuerySet
+    """
 
     publishers = user.editor_publishers.all()
 
@@ -801,10 +1149,31 @@ def editor_newsletters(user):
 
 
 # Editor edit article
+# -------------------
 @login_required
 @user_passes_test(is_editor)
 def editor_edit_article(request, article_id):
-    ''' Function handles editor role when editing article '''
+    """Edit an article associated with an editor's publisher.
+
+    Allows authenticated editors to edit articles associated with
+    their assigned publishers.
+
+    The article is retrieved using its unique identifier and the
+    editor's associated publishers. The publisher selection field
+    is restricted to publishers assigned to the authenticated editor.
+
+    Following a successful update, the article is marked as pending
+    approval and the editor is redirected to the editor dashboard.
+
+    :param request: The HTTP request received from the authenticated
+        editor.
+    :type request: HttpRequest
+    :param article_id: The unique identifier of the article to edit.
+    :type article_id: int
+    :returns: A redirect response following a successful update,
+        or a rendered response containing the article editing form.
+    :rtype: HttpResponse
+    """
 
     article = get_object_or_404(
         editor_articles(request.user),
@@ -846,11 +1215,31 @@ def editor_edit_article(request, article_id):
 
 
 # Delete article editor
+# ---------------------
 @login_required
 @user_passes_test(is_editor)
 @require_POST
 def editor_delete_article(request, article_id):
-    ''' Function handles deletion of article by editor'''
+    """Delete an article associated with an editor's publisher.
+
+    Allows authenticated editors to delete articles associated
+    with their assigned publishers.
+
+    The article is retrieved using its unique identifier and the
+    editor's associated publishers. Deletion is restricted to
+    POST requests.
+
+    Following successful deletion, a confirmation message is
+    displayed and the editor is redirected to the editor dashboard.
+
+    :param request: The HTTP POST request received from the
+        authenticated editor.
+    :type request: HttpRequest
+    :param article_id: The unique identifier of the article to delete.
+    :type article_id: int
+    :returns: A redirect response to the editor dashboard.
+    :rtype: HttpResponseRedirect
+    """
 
     article = get_object_or_404(
         editor_articles(request.user),
@@ -868,10 +1257,35 @@ def editor_delete_article(request, article_id):
 
 
 # Editor approve article
+# ----------------------
 @login_required
 @user_passes_test(is_editor)
 @require_POST
 def approve_article(request, article_id):
+    """Approve an article and initiate its distribution.
+
+    Allows authenticated editors to approve articles associated
+    with their assigned publishers.
+
+    Once approved, the article is saved and the distribution
+    process is initiated. Approved articles are distributed
+    to subscribers by email and submitted to the approved articles
+    API.
+
+    If distribution fails, the error is recorded in the application
+    log and a warning message is displayed. The article remains
+    approved even if distribution encounters a problem.
+
+    The approval operation is restricted to POST requests.
+
+    :param request: The HTTP POST request received from the
+        authenticated editor.
+    :type request: HttpRequest
+    :param article_id: The unique identifier of the article to approve.
+    :type article_id: int
+    :returns: A redirect response to the editor dashboard.
+    :rtype: HttpResponseRedirect
+    """
 
     article = get_object_or_404(
         editor_articles(request.user),
@@ -909,11 +1323,32 @@ def approve_article(request, article_id):
 
 
 # Editor approve newsletter
+# -------------------------
 @login_required
 @user_passes_test(is_editor)
 @require_POST
 def approve_newsletter(request, newsletter_id):
-    ''' Function handles approval of newsletter by editor'''
+    """Approve a newsletter associated with an editor's publisher.
+
+    Allows authenticated editors to approve newsletters associated
+    with their assigned publishers.
+
+    The newsletter approval status is updated and saved to the
+    database. Following successful approval, a confirmation
+    message is displayed and the editor is redirected to the
+    editor dashboard.
+
+    The approval operation is restricted to POST requests.
+
+    :param request: The HTTP POST request received from the
+        authenticated editor.
+    :type request: HttpRequest
+    :param newsletter_id: The unique identifier of the newsletter
+        to approve.
+    :type newsletter_id: int
+    :returns: A redirect response to the editor dashboard.
+    :rtype: HttpResponseRedirect
+    """
 
     newsletter = get_object_or_404(
         editor_newsletters(request.user),
@@ -931,10 +1366,36 @@ def approve_newsletter(request, newsletter_id):
     return redirect('editor_dashboard')
 
 
+# Distribute approved article
+# ---------------------------
 def distribute_approved_article(article, request):
-    """
-    Email an approved article to publisher and journalist
-    subscribers, then POST it to the approved articles API.
+    """Distribute an approved article to subscribers and the API.
+
+    Checks whether the article has been approved before initiating
+    distribution. Approved articles are distributed to readers
+    subscribed to the article's publisher and journalist.
+
+    Subscriber email addresses are collected and used to send an
+    email containing the article as an HTML attachment.
+
+    The approved article is also submitted to the application's
+    approved articles API using token authentication.
+
+    If the article has not been approved, the function returns
+    without performing any distribution operations.
+
+    :param article: The article to distribute to subscribers and
+        the approved articles API.
+    :type article: Article
+    :param request: The HTTP request used to construct the API
+        endpoint URL and obtain the authenticated user's token.
+    :type request: HttpRequest
+    :returns: None.
+    :rtype: None
+    :raises requests.exceptions.RequestException: If the API request
+        fails or returns an unsuccessful HTTP status code.
+    :raises Exception: If an error occurs during email generation,
+        delivery or API distribution.
     """
 
     if not article.approved:
@@ -953,10 +1414,12 @@ def distribute_approved_article(article, request):
         )
     )
 
+    # Combine subscriber querysets and remove duplicate users.
     subscribers = (
         publisher_subscribers | journalist_subscribers
     ).distinct()
 
+    # Collect email addresses for subscribers with valid addresses.
     recipient_emails = [
         subscriber.email
         for subscriber in subscribers
@@ -1006,10 +1469,35 @@ def distribute_approved_article(article, request):
 
 
 # Edit newsletter update
+# ----------------------
 @login_required
 @user_passes_test(is_editor)
 def editor_edit_newsletter(request, newsletter_id):
-    ''' Function handles editor, editing newsletter'''
+    """Edit an existing newsletter associated with an editor's publisher.
+
+    Allows authenticated editors to edit newsletters associated
+    with their assigned publishers.
+
+    The newsletter is retrieved using its unique identifier and
+    the editor's associated publishers. The article selection field
+    is restricted to approved articles belonging to the newsletter's
+    publisher.
+
+    Following a successful update, the newsletter is marked as
+    pending approval. The updated newsletter and its associated
+    articles are saved, and the editor is redirected to the
+    editor dashboard.
+
+    :param request: The HTTP request received from the authenticated
+        editor.
+    :type request: HttpRequest
+    :param newsletter_id: The unique identifier of the newsletter
+        to edit.
+    :type newsletter_id: int
+    :returns: A redirect response following a successful update,
+        or a rendered response containing the newsletter editing form.
+    :rtype: HttpResponse
+    """
 
     newsletter = get_object_or_404(
         editor_newsletters(request.user),
@@ -1055,11 +1543,32 @@ def editor_edit_newsletter(request, newsletter_id):
 
 
 # Editor delete newsletter
+# ------------------------
 @login_required
 @user_passes_test(is_editor)
 @require_POST
 def editor_delete_newsletter(request, newsletter_id):
-    ''' Function handles editor deleting newsletter'''
+    """Delete a newsletter associated with an editor's publisher.
+
+    Allows authenticated editors to delete newsletters associated
+    with their assigned publishers.
+
+    The newsletter is retrieved using its unique identifier and
+    the editor's associated publishers. Deletion is restricted
+    to POST requests.
+
+    Following successful deletion, a confirmation message is
+    displayed and the editor is redirected to the editor dashboard.
+
+    :param request: The HTTP POST request received from the
+        authenticated editor.
+    :type request: HttpRequest
+    :param newsletter_id: The unique identifier of the newsletter
+        to delete.
+    :type newsletter_id: int
+    :returns: A redirect response to the editor dashboard.
+    :rtype: HttpResponseRedirect
+    """
 
     newsletter = get_object_or_404(
         editor_newsletters(request.user),
@@ -1077,20 +1586,46 @@ def editor_delete_newsletter(request, newsletter_id):
 
 
 # Subscription
-'''
-    Readers will utilise the session management capability to retain their
-    subscription data. The subscribe function will displayed in the
-    browse pages for readers. Journalist and editor accounts are restricted
-    from this capability.
-'''
+# =============
+#
+# Readers can manage their subscriptions to publishers and journalists
+# through the application.
+#
+# Subscription functionality is available to authenticated readers
+# and is presented through the relevant browsing pages.
+#
+# Journalist and editor accounts are excluded from this functionality.
+# Subscription relationships are maintained through the user's
+# subscription associations.
 
 
 # Subscribe to publisher
+# ----------------------
 @login_required
 @user_passes_test(is_reader)
 @require_POST
 def subscribe_publisher(request, publisher_id):
-    ''' Function handles reader account subscription for publishers'''
+    """Subscribe a reader to a publisher.
+
+    Allows authenticated readers to subscribe to publishers.
+
+    The publisher is retrieved using its unique identifier and
+    added to the authenticated reader's subscribed publishers.
+    A confirmation message is displayed following successful
+    subscription.
+
+    The operation is restricted to POST requests and is only
+    available to authenticated users with the reader role.
+
+    :param request: The HTTP POST request received from the
+        authenticated reader.
+    :type request: HttpRequest
+    :param publisher_id: The unique identifier of the publisher
+        to subscribe to.
+    :type publisher_id: int
+    :returns: A redirect response to the reader dashboard.
+    :rtype: HttpResponseRedirect
+    """
 
     publisher = get_object_or_404(
         Publisher,
@@ -1107,12 +1642,34 @@ def subscribe_publisher(request, publisher_id):
     return redirect("reader_dashboard")
 
 
-# Un-subscribe to publisher
+# Un-subscribe from publisher
+# ---------------------------
 @login_required
 @user_passes_test(is_reader)
 @require_POST
 def unsubscribe_publisher(request, publisher_id):
-    ''' Function handles reader account un-subscription for publishers'''
+    """Unsubscribe a reader from a publisher.
+
+    Allows authenticated readers to unsubscribe from publishers
+    to which they have previously subscribed.
+
+    The publisher is retrieved using its unique identifier and
+    removed from the authenticated reader's subscribed publishers.
+    A confirmation message is displayed following successful
+    unsubscription.
+
+    The operation is restricted to POST requests and is only
+    available to authenticated users with the reader role.
+
+    :param request: The HTTP POST request received from the
+        authenticated reader.
+    :type request: HttpRequest
+    :param publisher_id: The unique identifier of the publisher
+        to unsubscribe from.
+    :type publisher_id: int
+    :returns: A redirect response to the reader dashboard.
+    :rtype: HttpResponseRedirect
+    """
 
     publisher = get_object_or_404(
         Publisher,
@@ -1130,11 +1687,35 @@ def unsubscribe_publisher(request, publisher_id):
 
 
 # Subscribe to journalist
+# -----------------------
 @login_required
 @user_passes_test(is_reader)
 @require_POST
 def subscribe_journalist(request, journalist_id):
-    ''' Function handles reader account subscription for journalists '''
+    """Subscribe a reader to a journalist.
+
+    Allows authenticated readers to subscribe to journalists.
+
+    The journalist is retrieved using their unique identifier,
+    with an additional check to ensure that the account has the
+    journalist role. The journalist is then added to the
+    authenticated reader's subscribed journalists.
+
+    A confirmation message is displayed following successful
+    subscription.
+
+    The operation is restricted to POST requests and is only
+    available to authenticated users with the reader role.
+
+    :param request: The HTTP POST request received from the
+        authenticated reader.
+    :type request: HttpRequest
+    :param journalist_id: The unique identifier of the journalist
+        to subscribe to.
+    :type journalist_id: int
+    :returns: A redirect response to the home page.
+    :rtype: HttpResponseRedirect
+    """
 
     journalist = get_object_or_404(
         CustomUser,
@@ -1152,12 +1733,37 @@ def subscribe_journalist(request, journalist_id):
     return redirect("home")
 
 
-# Un-subscribe to journalist
+# Un-subscribe from journalist
+# ----------------------------
 @login_required
 @user_passes_test(is_reader)
 @require_POST
 def unsubscribe_journalist(request, journalist_id):
-    ''' Function handles reader account un-subscription for journalists '''
+    """Unsubscribe a reader from a journalist.
+
+    Allows authenticated readers to unsubscribe from journalists
+    to which they have previously subscribed.
+
+    The journalist is retrieved using their unique identifier,
+    with an additional check to ensure that the account has the
+    journalist role. The journalist is then removed from the
+    authenticated reader's subscribed journalists.
+
+    A confirmation message is displayed following successful
+    unsubscription.
+
+    The operation is restricted to POST requests and is only
+    available to authenticated users with the reader role.
+
+    :param request: The HTTP POST request received from the
+        authenticated reader.
+    :type request: HttpRequest
+    :param journalist_id: The unique identifier of the journalist
+        to unsubscribe from.
+    :type journalist_id: int
+    :returns: A redirect response to the reader dashboard.
+    :rtype: HttpResponseRedirect
+    """
 
     journalist = get_object_or_404(
         CustomUser,
@@ -1176,18 +1782,34 @@ def unsubscribe_journalist(request, journalist_id):
 
 
 # Browse functions
-'''
-    The following functions enable the user to browse: articles,
-    journalists, publishers and newsletters. As previously stated,
-    this enables the users to view publications accross the database.
-    As their own dashboards are restricted to their affiliated
-    publications.
-'''
+# ================
+#
+# The following functions allow users to browse articles, journalists,
+# publishers and newsletters across the application.
+#
+# This functionality provides access to publications throughout the
+# database, whereas individual user dashboards are restricted to
+# publications associated with their respective accounts or roles.
 
 
 # Browse publishers
+# -----------------
 def browse_publishers(request):
-    ''' Functions handles collation of all publishers'''
+    """Display all publishers available in the application.
+
+    Retrieves all publishers from the database and orders them
+    alphabetically by name.
+
+    For authenticated readers, the IDs of publishers to which
+    they have subscribed are also retrieved. This information
+    allows the browsing template to identify existing subscriptions.
+
+    :param request: The HTTP request received from the user.
+    :type request: HttpRequest
+    :returns: A rendered response containing the publisher list
+        and the authenticated reader's subscription information.
+    :rtype: HttpResponse
+    """
 
     publishers = Publisher.objects.all().order_by('name')
     subscribed_publisher_ids = []
@@ -1211,8 +1833,23 @@ def browse_publishers(request):
 
 
 # Browse journalists
+# -------------------
 def browse_journalists(request):
-    '''  Functions handles collation of all journalists '''
+    """Display all journalists registered in the application.
+
+    Retrieves users assigned the journalist role and orders
+    the results alphabetically by username.
+
+    For authenticated readers, the IDs of journalists to whom
+    they have subscribed are also retrieved. This information
+    allows the browsing template to identify existing subscriptions.
+
+    :param request: The HTTP request received from the user.
+    :type request: HttpRequest
+    :returns: A rendered response containing the journalist list
+        and the authenticated reader's subscription information.
+    :rtype: HttpResponse
+    """
 
     journalists = User.objects.filter(
         role=CustomUser.Role.JOURNALIST
@@ -1238,19 +1875,42 @@ def browse_journalists(request):
 
 
 # Collections
-'''
-    Collections collate the publications for publishers and journalists.
-    This facilitates the ability to contain a readers subscribed materials.
-    Whilst also forming a core element to the browse functions. Working
-    together, the browse function allows the partitioning of publications
-    accross journalists and publishers and select collections to view the
-    entirety of their work.
-'''
+# ===========
+#
+# Collection views group publications according to their associated
+# publishers or journalists.
+#
+# This functionality supports the browsing system and allows readers
+# to explore publications from individual publishers and journalists.
+# Collections also provide a structured way to display articles and
+# newsletters together with their associated authors and publishers.
 
 
 # Publisher collection
+# --------------------
 def publisher_collection(request, publisher_id):
-    ''' Function handles display of a publishers collection '''
+    """Display the approved publications associated with a publisher.
+
+    Retrieves a publisher using its unique identifier and displays
+    its approved articles, approved newsletters and associated
+    journalists.
+
+    Articles are ordered by creation date, with the most recent
+    displayed first. Newsletters are also ordered by creation date
+    and include their associated articles.
+
+    Journalists associated with the publisher are ordered
+    alphabetically by username.
+
+    :param request: The HTTP request received from the user.
+    :type request: HttpRequest
+    :param publisher_id: The unique identifier of the publisher
+        whose collection is being displayed.
+    :type publisher_id: int
+    :returns: A rendered response containing the publisher's
+        approved publications and associated journalists.
+    :rtype: HttpResponse
+    """
 
     publisher = get_object_or_404(
         Publisher,
@@ -1289,8 +1949,27 @@ def publisher_collection(request, publisher_id):
 
 
 # Journalist collection
+# --------------------
 def journalist_collection(request, journalist_id):
-    '''  Function handles display of a journalists collection  '''
+    """Display the approved publications associated with a journalist.
+
+    Retrieves a journalist using their unique identifier and verifies
+    that the account has the journalist role.
+
+    Displays the journalist's approved articles and newsletters.
+    Both publication types are ordered by creation date, with the
+    most recent publications displayed first. Newsletters include
+    their associated articles.
+
+    :param request: The HTTP request received from the user.
+    :type request: HttpRequest
+    :param journalist_id: The unique identifier of the journalist
+        whose collection is being displayed.
+    :type journalist_id: int
+    :returns: A rendered response containing the journalist's
+        approved articles and newsletters.
+    :rtype: HttpResponse
+    """
 
     journalist = get_object_or_404(
         CustomUser,
@@ -1322,8 +2001,19 @@ def journalist_collection(request, journalist_id):
 
 
 # Browse newsletters
+# ------------------
 def browse_newsletters(request):
-    '''  Function handles display of all newsletters. '''
+    """Display all approved newsletters in the application.
+
+    Retrieves newsletters that have received editorial approval
+    and orders them by creation date, with the most recent
+    newsletters displayed first.
+
+    :param request: The HTTP request received from the user.
+    :type request: HttpRequest
+    :returns: A rendered response containing the approved newsletter list.
+    :rtype: HttpResponse
+    """
 
     newsletters = Newsletter.objects.filter(
         approved=True
@@ -1339,8 +2029,19 @@ def browse_newsletters(request):
 
 
 # Browse articles
+# ---------------
 def browse_articles(request):
-    ''' Function handles display of all articles'''
+    """Display all approved articles in the application.
+
+    Retrieves articles that have received editorial approval
+    and orders them by creation date, with the most recent
+    articles displayed first.
+
+    :param request: The HTTP request received from the user.
+    :type request: HttpRequest
+    :returns: A rendered response containing the approved article list.
+    :rtype: HttpResponse
+    """
 
     articles = Article.objects.filter(
         approved=True
@@ -1356,15 +2057,30 @@ def browse_articles(request):
 
 
 # API Functions
-'''
-The following functions provide API functionality.
-'''
+# =============
+#
+# The following functions provide supporting functionality for the
+# application's REST API.
+#
+# They handle role-based access restrictions, publisher assignment
+# checks, model validation and the retrieval of articles submitted
+# through API requests.
 
 
 # Get reader
+# ----------
 def api_get_reader(user):
-    """
-    Check that the authenticated user is a reader.
+    """Validate that the authenticated user has the reader role.
+
+    Checks whether the supplied user account has the reader role.
+    If the user has a different role, a REST framework permission
+    exception is raised.
+
+    :param user: The authenticated user whose role is being checked.
+    :type user: CustomUser
+    :raises DRFPermissionDenied: If the user does not have the reader role.
+    :returns: The authenticated reader account.
+    :rtype: CustomUser
     """
     if user.role != CustomUser.Role.READER:
         raise DRFPermissionDenied(
@@ -1375,8 +2091,21 @@ def api_get_reader(user):
 
 
 # Get journalist
+# --------------
 def api_get_journalist(user):
-    """Check that the authenticated user is a journalist."""
+    """Validate that the authenticated user has the journalist role.
+
+    Checks whether the supplied user account has the journalist role.
+    If the user has a different role, a REST framework permission
+    exception is raised.
+
+    :param user: The authenticated user whose role is being checked.
+    :type user: CustomUser
+    :raises DRFPermissionDenied: If the user does not have the
+        journalist role.
+    :returns: The authenticated journalist account.
+    :rtype: CustomUser
+    """
 
     if user.role != CustomUser.Role.JOURNALIST:
         raise DRFPermissionDenied(
@@ -1386,9 +2115,25 @@ def api_get_journalist(user):
     return user
 
 
-# Get editor
+# Get editor publisher
+# --------------------
 def api_get_editor_publisher(user):
-    """Get the publisher assigned to the authenticated editor."""
+    """Retrieve the publishers assigned to an authenticated editor.
+
+    Checks whether the supplied user account has the editor role
+    and retrieves the publishers associated with that account.
+
+    A permission exception is raised if the user does not have
+    the editor role or has no assigned publishers.
+
+    :param user: The authenticated user whose editor role and
+        publisher associations are being checked.
+    :type user: CustomUser
+    :raises DRFPermissionDenied: If the user is not an editor or
+        has no assigned publisher.
+    :returns: A queryset containing the editor's assigned publishers.
+    :rtype: QuerySet
+    """
 
     if user.role != CustomUser.Role.EDITOR:
         raise DRFPermissionDenied(
@@ -1405,8 +2150,21 @@ def api_get_editor_publisher(user):
 
 
 # Validate model
+# --------------
 def api_validate_model(instance):
-    """Run Django model validation and return errors as API errors."""
+    """Validate a Django model instance and return validation errors.
+
+    Runs Django's full model validation using the ``full_clean()``
+    method. If validation fails, the resulting Django validation
+    errors are converted into Django REST framework validation
+    exceptions for consistent API error handling.
+
+    :param instance: The Django model instance to validate.
+    :type instance: Model
+    :raises ValidationError: If the model instance fails validation.
+    :returns: None.
+    :rtype: None
+    """
 
     from django.core.exceptions import ValidationError as DjangoValidationError
 
@@ -1419,8 +2177,28 @@ def api_validate_model(instance):
 
 
 # Get articles
+# ------------
 def api_get_articles(request, **filters):
-    """Retrieve and validate article IDs submitted to a newsletter."""
+    """Retrieve and validate articles submitted through an API request.
+
+    Retrieves article IDs from the request data and validates that
+    they are supplied as a list without duplicate entries.
+
+    Articles are retrieved from the database using the supplied IDs
+    and any additional filtering criteria. A validation exception
+    is raised if the number of retrieved articles does not match
+    the number of submitted IDs.
+
+    :param request: The API request containing the submitted article IDs.
+    :type request: Request
+    :param filters: Additional filtering criteria applied to the
+        article database query.
+    :type filters: dict
+    :raises ValidationError: If the article IDs are not supplied as
+        a list, contain duplicates, or include unavailable articles.
+    :returns: A queryset containing the validated articles.
+    :rtype: QuerySet
+    """
 
     article_ids = request.data.get('articles', [])
 
@@ -1447,14 +2225,48 @@ def api_get_articles(request, **filters):
     return articles
 
 
+# Retrieve and create articles
+# ----------------------------
+# Authenticated users can retrieve approved articles through the API.
+# Article creation is restricted to authenticated journalists.
+# Publisher-affiliated articles require editorial approval, whereas
+# independently published articles are automatically approved.
+
 # Readers retrieve articles, journalists may create articles
 @api_view(['GET', 'POST'])
 @authentication_classes([TokenAuthentication])
 @permission_classes([IsAuthenticated])
 def api_articles(request):
-    """
-    GET: Retrieve all approved articles.
-    POST: Allow journalists to create articles.
+    """Retrieve approved articles or create a new article.
+
+    Provides two API operations depending on the HTTP request method.
+
+    * ``GET``: Retrieves all approved articles, including their
+      associated authors and publishers. Articles are ordered by
+      creation date, with the most recent displayed first.
+    * ``POST``: Allows authenticated journalists to create articles.
+      The submitted article is validated using the article serializer
+      and Django model validation.
+
+    Articles associated with a publisher require editorial approval.
+    Independent articles are automatically approved. Journalists
+    can only submit articles associated with publishers to which
+    they belong.
+
+    Article creation is performed within an atomic database
+    transaction.
+
+    Authentication is provided through token authentication.
+
+    :param request: The authenticated API request containing the
+        HTTP method and, for POST requests, the submitted article data.
+    :type request: Request
+    :raises DRFPermissionDenied: If the authenticated user is not
+        a journalist when submitting an article, or if the journalist
+        does not belong to the selected publisher.
+    :returns: A REST framework response containing serialized article
+        data, serializer validation errors, or the created article.
+    :rtype: Response
     """
 
     if request.method == 'GET':
@@ -1517,13 +2329,30 @@ def api_articles(request):
 
 
 # Get subscribed articles
+# -----------------------
 @api_view(['GET'])
 @authentication_classes([TokenAuthentication])
 @permission_classes([IsAuthenticated])
 def api_subscribed_articles(request):
-    """
-    Retrieve approved articles from subscribed journalists
-    and publishers.
+    """Retrieve approved articles from a reader's subscriptions.
+
+    Retrieves approved articles written by journalists or published
+    by publishers to which the authenticated reader has subscribed.
+
+    The results include associated authors and publishers and are
+    ordered by creation date, with the most recent articles displayed
+    first. Duplicate results are removed.
+
+    Access is restricted to authenticated users with the reader role.
+    Authentication is provided through token authentication.
+
+    :param request: The authenticated API request.
+    :type request: Request
+    :raises DRFPermissionDenied: If the authenticated user does not
+        have the reader role.
+    :returns: A REST framework response containing the serialized
+        subscribed articles.
+    :rtype: Response
     """
 
     reader = api_get_reader(request.user)
@@ -1551,14 +2380,49 @@ def api_subscribed_articles(request):
 
 
 # Article details
+# ---------------
 @api_view(['GET', 'PUT', 'DELETE'])
 @authentication_classes([TokenAuthentication])
 @permission_classes([IsAuthenticated])
 def api_article_detail(request, article_id):
-    """
-    GET: Retrieve an individual article.
-    PUT: Update an article.
-    DELETE: Delete an article.
+    """Retrieve, update or delete an individual article.
+
+    Provides three API operations depending on the HTTP request method.
+
+    * ``GET``: Retrieves an individual article. Approved articles are
+      accessible to all authenticated users. Unapproved articles are
+      restricted to their journalist author or an editor associated
+      with the article's publisher.
+    * ``PUT``: Allows journalists and editors to update articles
+      according to their respective permissions. Journalists can only
+      update their own articles, whereas editors can update articles
+      associated with their assigned publishers.
+    * ``DELETE``: Allows journalists to delete their own articles
+      and editors to delete articles associated with their assigned
+      publishers.
+
+    Journalist updates preserve article ownership and apply the
+    appropriate approval status according to publisher affiliation.
+    Editor updates preserve publisher ownership and return the article
+    to pending approval.
+
+    Model validation is performed before updates are saved.
+    Database transactions are used when saving changes.
+
+    Authentication is provided through token authentication.
+
+    :param request: The authenticated API request containing the
+        HTTP method and, for PUT requests, the submitted article data.
+    :type request: Request
+    :param article_id: The unique identifier of the article to retrieve,
+        update or delete.
+    :type article_id: int
+    :raises DRFPermissionDenied: If the authenticated user does not
+        have permission to access, update or delete the requested
+        article.
+    :returns: A REST framework response containing serialized article
+        data, a success message, or serializer validation errors.
+    :rtype: Response
     """
 
     article = get_object_or_404(
@@ -1756,12 +2620,31 @@ def api_article_detail(request, article_id):
 
 
 # Get approved articles
+# ---------------------
 @api_view(['POST'])
 @authentication_classes([TokenAuthentication])
 @permission_classes([IsAuthenticated])
 def api_approved_article(request):
-    """
-    Receive and verify an approved article.
+    """Receive and verify an approved article.
+
+    Retrieves an article using the article ID supplied in the
+    API request and verifies that the article has received
+    editorial approval.
+
+    If the article exists and is approved, a successful response
+    is returned containing its ID and title.
+
+    Access is restricted to authenticated users.
+    Authentication is provided through token authentication.
+
+    :param request: The authenticated API request containing
+        the article ID.
+    :type request: Request
+    :returns: A REST framework response containing a confirmation
+        message, the article ID and its title.
+    :rtype: Response
+    :raises Http404: If the article does not exist or has not
+        received editorial approval.
     """
 
     article_id = request.data.get('article_id')
@@ -1783,14 +2666,31 @@ def api_approved_article(request):
 
 
 # Newsletter API
+# ---------------
 @api_view(['GET'])
 @authentication_classes([TokenAuthentication])
 @permission_classes([IsAuthenticated])
 def api_newsletters(request):
-    """
-    GET: Retrieve all approved newsletters.
+    """Retrieve all approved newsletters.
 
-    Available to all authenticated users.
+    Retrieves all newsletters that have received editorial approval.
+
+    The associated authors, publishers and articles are also
+    retrieved to support newsletter serialization efficiently.
+
+    Newsletters are ordered by creation date, with the most recent
+    displayed first.
+
+    This endpoint is available to all authenticated users,
+    regardless of their assigned application role.
+
+    Authentication is provided through token authentication.
+
+    :param request: The authenticated API request.
+    :type request: Request
+    :returns: A REST framework response containing the serialized
+        collection of approved newsletters.
+    :rtype: Response
     """
 
     newsletters = Newsletter.objects.filter(
@@ -1814,18 +2714,39 @@ def api_newsletters(request):
 
 
 # Get newsletter detail
+# ---------------------
 @api_view(['GET'])
 @authentication_classes([TokenAuthentication])
 @permission_classes([IsAuthenticated])
 def api_newsletter_detail(request, newsletter_id):
-    """
-    GET: Retrieve an individual newsletter.
+    """Retrieve an individual newsletter.
 
-    Approved newsletters are available to all authenticated users.
+    Retrieves a newsletter using its unique identifier, including
+    its associated author, publisher and articles.
 
-    Unapproved newsletters are only available to:
-    - The journalist who created the newsletter.
-    - Editors assigned to the newsletter's publisher.
+    Access permissions depend on the newsletter's approval status:
+
+    * Approved newsletters are available to all authenticated users.
+    * Unapproved newsletters are restricted to the journalist
+      who created them or editors assigned to the newsletter's
+      associated publisher.
+
+    If an authenticated user does not meet the access requirements
+    for an unapproved newsletter, a REST framework permission
+    exception is raised.
+
+    Authentication is provided through token authentication.
+
+    :param request: The authenticated API request.
+    :type request: Request
+    :param newsletter_id: The unique identifier of the newsletter
+        to retrieve.
+    :type newsletter_id: int
+    :raises DRFPermissionDenied: If the authenticated user does not
+        have permission to access an unapproved newsletter.
+    :returns: A REST framework response containing the serialized
+        newsletter data.
+    :rtype: Response
     """
 
     newsletter = get_object_or_404(
@@ -1867,13 +2788,35 @@ def api_newsletter_detail(request, newsletter_id):
 
 
 # Editor approve newsletter
+# -------------------------
 @api_view(['POST'])
 @authentication_classes([TokenAuthentication])
 @permission_classes([IsAuthenticated])
 def api_approve_newsletter(request, newsletter_id):
-    """
-    Allow editors to approve newsletters belonging
-    to their assigned publishers.
+    """Approve a newsletter associated with an editor's publisher.
+
+    Allows authenticated editors to approve newsletters belonging
+    to publishers assigned to their accounts.
+
+    The newsletter is retrieved using its unique identifier and
+    filtered against the editor's assigned publishers.
+
+    Following successful retrieval, the newsletter's approval
+    status is updated and saved to the database.
+
+    Access is restricted to authenticated users with the editor role.
+    Authentication is provided through token authentication.
+
+    :param request: The authenticated API request.
+    :type request: Request
+    :param newsletter_id: The unique identifier of the newsletter
+        to approve.
+    :type newsletter_id: int
+    :raises DRFPermissionDenied: If the authenticated user is not
+        an editor or does not have an assigned publisher.
+    :returns: A REST framework response containing a confirmation
+        message, the newsletter ID, its title and approval status.
+    :rtype: Response
     """
 
     publishers = api_get_editor_publisher(request.user)
@@ -1902,13 +2845,39 @@ def api_approve_newsletter(request, newsletter_id):
 
 
 # Get own subscribers
+# -------------------
 @api_view(['GET'])
 @authentication_classes([TokenAuthentication])
 @permission_classes([IsAuthenticated])
 def api_users(request):
-    """
-    GET: Allow editors to retrieve readers subscribed
-    to a specified publisher they manage.
+    """Retrieve readers subscribed to an editor's publisher.
+
+    Allows authenticated editors to retrieve a list of readers
+    subscribed to a specified publisher assigned to their account.
+
+    The publisher ID must be supplied as a query parameter.
+    The requested publisher is checked against the editor's
+    assigned publishers before subscriber information is retrieved.
+
+    Only users with the reader role who are subscribed to the
+    specified publisher are included in the results.
+
+    The returned users are ordered alphabetically by username
+    and serialized using the user serializer.
+
+    Access is restricted to authenticated users with the editor role.
+    Authentication is provided through token authentication.
+
+    :param request: The authenticated API request containing
+        the publisher ID as a query parameter.
+    :type request: Request
+    :raises DRFPermissionDenied: If the authenticated user is not
+        an editor, has no assigned publishers, or attempts to
+        access a publisher outside their assigned publishers.
+    :returns: A REST framework response containing the serialized
+        list of subscribed readers or an error message if the
+        publisher ID is not supplied.
+    :rtype: Response
     """
 
     if not is_editor(request.user):
@@ -1951,12 +2920,29 @@ def api_users(request):
 
 
 # List publishers collaborating with news app
+# ------------------------------------------
 @api_view(['GET'])
 @authentication_classes([TokenAuthentication])
 @permission_classes([IsAuthenticated])
 def api_publishers(request):
-    """
-    GET: Retrieve all publishers.
+    """Retrieve all publishers registered in the application.
+
+    Retrieves all publishers from the database and orders them
+    alphabetically by name.
+
+    The publisher records are serialized using the publisher
+    serializer before being returned as an API response.
+
+    This endpoint is available to all authenticated users,
+    regardless of their assigned application role.
+
+    Authentication is provided through token authentication.
+
+    :param request: The authenticated API request.
+    :type request: Request
+    :returns: A REST framework response containing the serialized
+        list of publishers.
+    :rtype: Response
     """
 
     publishers = Publisher.objects.all().order_by('name')
