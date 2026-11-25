@@ -5,56 +5,53 @@
 
 A Django-based news publishing application that allows readers, journalists and editors to interact with news content through role-based access control.
 
-The application uses Django REST Framework to provide API functionality for managing publishers, articles, newsletters and subscriptions.
+Built using Django and Django REST Framework, the application supports article and newsletter management, editorial approval, publisher and journalist subscriptions, and email notifications.
 
-## Features
+### Key Features
 
-- User registration and authentication.
-- Role-based access for readers, journalists and editors.
-- Editors register and or create publishers.
-- Publisher and journalist subscriptions.
-- Article creation, editing, deletion and approval.
-- Newsletter creation, editing, deletion and approval.
-- Editor approval of articles and newsletters.
+- User registration and token-based authentication.
+- Role-based permissions for readers, journalists and editors.
+- Publisher registration and management.
+- Article and newsletter creation, editing and approval.
+- Reader subscriptions to publishers and journalists.
+- Browsing approved articles and newsletters.
 - Email notifications following content approval.
-- Browsing publishers, journalists and published content.
 - REST API endpoints for content and subscription management.
-- Automated testing with Django's test framework.
+- Automated testing using Django's test framework.
 
-## Technologies Used
+### Technologies
 
-- Python
-- Django
+- Python and Django
 - Django REST Framework
 - MariaDB
+- Gunicorn
+- Docker and Docker Compose
 - HTML and CSS
-- unittest.mock for testing and mocking external dependencies.
 
-## Installation and Setup
+---
+
+## Installation and Setup (Virtual Environment)
 
 ### Prerequisites
 
-- Python 3.10 or later (or the version specified by the project).
-- pip
 - Git
+- Python (use a version supported by the project dependencies).
+- pip
 - MariaDB
+- A MariaDB database and user configured for the application.
 
 ### 1. Clone the repository
 
-
-Navigate to the application directory:
-
 ```bash
+git clone <repository-url>
 cd NewsApplication/news_app
 ```
 
-### 2. Create a virtual environment
+### 2. Create and activate a virtual environment
 
 ```bash
 python -m venv .venv
 ```
-
-Activate the environment.
 
 **Windows:**
 
@@ -70,78 +67,31 @@ source .venv/bin/activate
 
 ### 3. Install dependencies
 
-If a requirements file is included:
-
 ```bash
 pip install -r requirements.txt
 ```
 
-Otherwise:
+### 4. Configure MariaDB
 
-```bash
-pip install django djangorestframework mysqlclient
-```
+Ensure MariaDB is installed and running, and that the application database and database user already exist.
 
-### 4. MariaDB Configuration
+Check the database configuration in Django's `settings.py`. Configure the database name, username, password, host and port to match your local MariaDB installation.
 
-- Ensure MariaDB is installed and the service is running.
-- Ensure the application database and database user already exist.
-- Activate the Django virtual environment.
-- Install the MariaDB database connector if not already installed:
+The application uses the MySQL database backend and requires `mysqlclient`.
 
-```bash
-pip install mysqlclient
-```
-
-- Verify the existing database configuration in `settings.py`.
-- Retain the provided database name, username, password, host and port.
-- Ensure the configured database name matches the existing MariaDB database.
-
-The existing database configuration is:
-
-```python
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.mysql',
-        'NAME': 'news_app.db',
-        'USER': 'django_user',
-        'PASSWORD': 'SuperStrongPassword000',
-        'HOST': 'localhost',
-        'PORT': '3306',
-    }
-}
-```
-
-- Do not create the MariaDB database or database user as part of these instructions.
-- Do not modify the existing database credentials in `settings.py`.
-
-### 5. Check the Django configuration
-
-```bash
-python manage.py check
-```
-
-### 6. Apply migrations
-
-Generate migrations:
-
-```bash
-python manage.py makemigrations
-```
-
-Apply migrations to create the application tables:
+### 5. Run database migrations
 
 ```bash
 python manage.py migrate
 ```
 
-### 7. Create an administrator account (optional)
+### 6. Create an administrator account (optional)
 
 ```bash
 python manage.py createsuperuser
 ```
 
-### 8. Start the development server
+### 7. Run the application
 
 ```bash
 python manage.py runserver
@@ -153,60 +103,164 @@ http://127.0.0.1:8000/
 
 ---
 
-## Application Structure
+## Running with Docker
 
-```text
-NewsApplication/
-│
-├── news_app/
-│   ├── manage.py
-│   ├── good_to_know/
-│   │   ├── models.py
-│   │   ├── views.py
-│   │   ├── urls.py
-│   │   ├── tests.py
-│   │   ├── templates/
-│   │   └── migrations/
-│   │
-│   └── project configuration
-│
-│
-└── README.md
-```
+The application includes a Dockerfile and Docker Compose configuration (`docker.yml`) to build and run the Django application alongside a MariaDB database.
 
-## API Endpoints
+Docker Compose manages both containers, database connectivity, persistent storage and application startup.
 
-All API endpoints require token authentication unless otherwise stated.
+### Prerequisites
 
-- **GET `/api/articles/`** – Retrieve all approved articles.
-- **POST `/api/articles/`** – Allow journalists to create articles, either independently or under an affiliated publisher.
-- **GET `/api/subscribed/`** – Allow readers to retrieve approved articles from their subscribed publishers and journalists.
-- **GET `/api/articles/<article_id>/`** – Retrieve an individual article, subject to approval and ownership permissions.
-- **PUT `/api/articles/<article_id>/`** – Allow journalists to edit their own articles and editors to edit articles belonging to their publishers.
-- **DELETE `/api/articles/<article_id>/`** – Allow journalists to delete their own articles and editors to delete articles belonging to their publishers.
-- **POST `/api/approved/`** – Receive and verify an approved article following distribution.
-- **GET `/api/newsletters/`** – Retrieve all approved newsletters.
-- **GET `/api/newsletters/<newsletter_id>/`** – Retrieve an individual newsletter, with additional access for its journalist author and assigned publisher editors.
-- **POST `/api/newsletters/<newsletter_id>/approve/`** – Allow editors to approve newsletters belonging to their assigned publishers.
-- **GET `/api/users/?publisher_id=<id>`** – Allow editors to retrieve readers subscribed to a specified publisher they manage.
-- **GET `/api/publishers/`** – Retrieve a list of all publishers.
+- Git
+- [Docker Desktop](https://www.docker.com/products/docker-desktop/) (Windows/macOS), or Docker Engine and the Docker Compose plugin (Linux).
+- Docker must be installed and running.
 
-### API Features
+No local Python or MariaDB installation is required when using Docker.
 
-- **Authentication:** Token-based authentication protects API endpoints.
-- **Role-based permissions:** Access is restricted according to reader, journalist and editor roles.
-- **Content approval:** Publisher-affiliated articles and newsletters require editorial approval before publication.
-- **Subscription filtering:** Readers can retrieve content from their subscribed publishers and journalists.
-- **Data validation:** Serializers and model validation ensure submitted data meets application requirements.
-- **Content distribution:** Approved articles are distributed to subscribers by email and forwarded to the approved articles API.
-
-### Run all tests
+### 1. Clone the repository
 
 ```bash
-python manage.py test 
+git clone <repository-url>
+cd NewsApplication/news_app
 ```
 
-### Run system checks
+Ensure the following files are present in the application directory:
+
+- `Dockerfile`
+- `docker.yml`
+- `requirements.txt`
+- `manage.py`
+
+### 2. Create the environment file
+
+Docker Compose requires a `.env` file in the same directory as `docker.yml`.
+
+Create a file named `.env` and add the following configuration:
+
+```env
+DB_NAME=news_app
+DB_USER=django_user
+DB_PASSWORD=your_database_password
+DB_ROOT_PASSWORD=your_root_password
+```
+
+Replace the example passwords with your own secure values.
+
+The variables configure the MariaDB database, application user and root account. Docker Compose uses them to initialise the database container and passes the environment file to the Django container.
+
+Ensure any additional environment variables required by the Django application, such as its secret key or email configuration, are also provided if required by your project settings.
+
+**Important:** Do not commit `.env` or real database credentials to version control.
+
+### 3. Build and start the containers
+
+From the directory containing `docker.yml`, run:
+
+```bash
+docker compose -f docker.yml up --build -d
+```
+
+This command:
+
+- Builds the Django application image using the Dockerfile.
+- Downloads the MariaDB 11.4 image if it is not already available.
+- Creates the application and database containers.
+- Creates the persistent Docker volumes.
+- Starts MariaDB and waits for its health check to pass.
+- Runs Django database migrations automatically.
+- Collects static files.
+- Starts Gunicorn on port 8000.
+
+The `-d` option runs the containers in the background.
+
+### 4. Check that the containers are running
+
+```bash
+docker compose -f docker.yml ps
+```
+
+Both `web` and `db` containers should be running. The database should report a healthy status.
+
+To view application logs:
+
+```bash
+docker compose -f docker.yml logs -f
+```
+
+To view only the Django application logs:
+
+```bash
+docker compose -f docker.yml logs -f web
+```
+
+Press `Ctrl+C` to stop following the logs. This does not stop the containers.
+
+### 5. Access the application
+
+Once the containers have started successfully, open:
+
+http://localhost:8000/
+
+The Django application is served through Gunicorn inside the web container.
+
+### 6. Create an administrator account (optional)
+
+To create a Django superuser inside the running web container:
+
+```bash
+docker compose -f docker.yml exec web python manage.py createsuperuser
+```
+
+### 7. Stop the containers
+
+To stop and remove the containers:
+
+```bash
+docker compose -f docker.yml down
+```
+
+This preserves the named Docker volumes, including the MariaDB database and collected static and media files.
+
+To stop the containers and delete all persistent volumes:
+
+```bash
+docker compose -f docker.yml down -v
+```
+
+**Warning:** The second command permanently deletes the database and other data stored in the named volumes.
+
+### Docker Configuration Summary
+
+| Component | Configuration |
+|---|---|
+| Web application | Django |
+| Application server | Gunicorn |
+| Database | MariaDB 11.4 |
+| Application port | 8000 |
+| Docker image | `leahcampbell/news-app-web:latest` |
+| Database storage | `mariadb_data` |
+| Static file storage | `static_data` |
+| Media file storage | `media_data` |
+
+The Docker Compose configuration automatically handles database startup dependencies, migrations and static file collection. Named volumes ensure database and application files persist when containers are stopped or recreated.
+
+---
+
+## Testing and System Checks
+
+Run the automated Django test suite from the activated virtual environment:
+
+```bash
+python manage.py test
+```
+
+Alternatively, run tests inside the Docker container:
+
+```bash
+docker compose -f docker.yml exec web python manage.py test
+```
+
+Run Django system checks:
 
 ```bash
 python manage.py check
@@ -214,36 +268,50 @@ python manage.py check
 
 ---
 
+## Application Roles
 
-## User Roles and Permissions
+The application supports three main user roles:
 
-The application supports three user roles:
+| Role | Responsibilities |
+|---|---|
+| **Reader** | Browse approved content and subscribe or unsubscribe from publishers and journalists. |
+| **Journalist** | Create and manage their own articles and newsletters and view their subscribers. |
+| **Editor** | Manage and approve articles and newsletters associated with their publisher and view publisher subscribers. |
 
-| Role | Main responsibilities | Restrictions |
-|---|---|---|
-| **Reader** | Browse approved content; subscribe and unsubscribe from publishers and journalists; view subscribed content. | Cannot create, edit, delete or approve content; cannot access management functions. |
-| **Journalist** | Create and manage their own articles and newsletters; view their subscribers. | Cannot approve content; cannot access editor-only or reader-only functions. |
-| **Editor** | Review, edit, delete and approve articles and newsletters associated with their publisher; view publisher subscribers. | Cannot manage content belonging to other publishers without authorisation. |
+Access to application features is controlled through authentication and role-based permissions.
 
-All permissions are enforced through the application's authentication and authorisation controls.
+---
+
+## API Overview
+
+The REST API provides endpoints for managing articles, newsletters, publishers, users and subscriptions.
+
+| Endpoint | Description |
+|---|---|
+| `GET /api/articles/` | Retrieve approved articles. |
+| `POST /api/articles/` | Create articles. |
+| `GET /api/articles/<article_id>/` | Retrieve an individual article. |
+| `PUT /api/articles/<article_id>/` | Edit an article. |
+| `DELETE /api/articles/<article_id>/` | Delete an article. |
+| `GET /api/subscribed/` | Retrieve content from subscribed publishers and journalists. |
+| `GET /api/newsletters/` | Retrieve approved newsletters. |
+| `GET /api/newsletters/<newsletter_id>/` | Retrieve an individual newsletter. |
+| `POST /api/newsletters/<newsletter_id>/approve/` | Approve a newsletter. |
+| `GET /api/users/?publisher_id=<id>` | Retrieve subscribers to a publisher. |
+| `GET /api/publishers/` | Retrieve publishers. |
+
+API permissions and authentication are enforced according to user roles.
+
+---
+
+## Documentation
+
+The project includes Sphinx documentation covering the application's implementation and supporting functionality.
+
+Refer to the project's Sphinx documentation for additional technical information.
 
 ---
 
 ## Future Improvements
 
-Potential future enhancements include:
-
-- Improved content search and filtering.
-- Expanded automated test coverage.
-- Production deployment.
-
----
-
-## Project Summary
-
-The News Application provides a role-based publishing platform built with Django and Django REST Framework.
-
-It supports content creation, editorial approval, newsletter management and reader subscriptions, with separate permissions for each user role.
-
-MariaDB provides the relational database backend for application data.
-
+Potential improvements include enhanced content search and filtering, expanded automated test coverage and production deployment.

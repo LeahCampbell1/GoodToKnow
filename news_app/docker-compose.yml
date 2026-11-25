@@ -1,0 +1,50 @@
+services:
+  web:
+    build: .
+    image: leahcampbell/news-app-web:latest
+    container_name: news-app-web
+
+    ports:
+      - "8000:8000"
+
+    env_file:
+      - .env
+
+    volumes:
+      - static_data:/app/staticfiles
+      - media_data:/app/media
+
+    depends_on:
+      db:
+        condition: service_healthy
+
+    command: >
+      sh -c "python manage.py migrate --noinput && python manage.py collectstatic --noinput && gunicorn news_app.wsgi:application --bind 0.0.0.0:8000 --workers 1 --access-logfile - --error-logfile -"
+
+    restart: unless-stopped
+
+  db:
+    image: mariadb:11.4
+    container_name: news-app-db
+
+    environment:
+      MARIADB_DATABASE: ${DB_NAME}
+      MARIADB_USER: ${DB_USER}
+      MARIADB_PASSWORD: ${DB_PASSWORD}
+      MARIADB_ROOT_PASSWORD: ${DB_ROOT_PASSWORD}
+
+    volumes:
+      - mariadb_data:/var/lib/mysql
+
+    healthcheck:
+      test: [ "CMD", "healthcheck.sh", "--connect", "--innodb_initialized" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+    restart: unless-stopped
+
+volumes:
+  mariadb_data:
+  static_data:
+  media_data:
