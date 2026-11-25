@@ -1,3 +1,4 @@
+
 from django.db import models, transaction
 from django.contrib.auth.models import AbstractUser, Group, Permission
 from django.contrib.contenttypes.models import ContentType
@@ -5,8 +6,26 @@ from django.core.exceptions import ValidationError
 
 
 class CustomUser(AbstractUser):
+    """Represent a user account with role-based access control.
+
+    Extends Django's ``AbstractUser`` model to support three
+    application roles: readers, editors and journalists.
+
+    Each role has different permissions and relationships with
+    publishers and other users.
+
+    Readers can subscribe to publishers and journalists.
+    Journalists can belong to publishers and create publications.
+    Editors can be assigned to publishers and manage their content.
+
+    Role-based permissions are automatically assigned through
+    Django groups whenever a user account is saved.
+
+    """
 
     class Role(models.TextChoices):
+        """Define the available application user roles."""
+
         READER = "READER", "Reader"
         EDITOR = "EDITOR", "Editor"
         JOURNALIST = "JOURNALIST", "Journalist"
@@ -44,6 +63,28 @@ class CustomUser(AbstractUser):
     )
 
     def save(self, *args, **kwargs):
+        """Save the user and synchronise role-based permissions.
+
+        Performs the save operation within an atomic database
+        transaction.
+
+        Before saving, the user account undergoes full model
+        validation. The appropriate Django group is then retrieved
+        or created according to the user's assigned role.
+
+        Any other application role groups are removed before the
+        appropriate group is assigned.
+
+        Finally, the permissions associated with the user's role
+        are synchronised with the assigned group.
+
+        :param args: Additional positional arguments passed to
+            the parent model save method.
+        :param kwargs: Additional keyword arguments passed to
+            the parent model save method.
+        :returns: None.
+        :rtype: None
+        """
 
         with transaction.atomic():
 
@@ -69,6 +110,24 @@ class CustomUser(AbstractUser):
             self.assign_group_permissions(group)
 
     def clean(self):
+        """Validate user role and associated relationships.
+
+        Ensures that users only maintain publisher relationships
+        and subscription relationships appropriate to their role.
+
+        The validation rules prevent:
+
+        * Readers from belonging to journalist or editor publishers.
+        * Journalists from belonging to editor publishers or
+          maintaining reader subscription relationships.
+        * Editors from belonging to journalist publishers or
+          maintaining reader subscription relationships.
+
+        :raises ValidationError: If the user has relationships
+            that are incompatible with their assigned role.
+        :returns: None.
+        :rtype: None
+        """
 
         super().clean()
 
@@ -107,6 +166,32 @@ class CustomUser(AbstractUser):
                 )
 
     def assign_group_permissions(self, group):
+        """Assign application permissions according to the user role.
+
+        Defines the Django model permissions available to readers,
+        journalists and editors.
+
+        Permissions are retrieved using their associated content
+        types and permission codenames.
+
+        The resulting permissions are assigned to the supplied
+        Django group, replacing its existing permission assignments.
+
+        Reader permissions provide access to view publications.
+
+        Journalist permissions additionally allow article creation,
+        editing and deletion, together with newsletter creation
+        and editing.
+
+        Editor permissions provide publication management
+        capabilities, including publisher management.
+
+        :param group: The Django authentication group receiving
+            the role-specific permissions.
+        :type group: Group
+        :returns: None.
+        :rtype: None
+        """
 
         permissions = {
             self.Role.READER: {
@@ -174,13 +259,16 @@ class CustomUser(AbstractUser):
 
 
 # Publisher model
+# ===============
 class Publisher(models.Model):
-    """
-    Represents a news publisher.
+    """Represent a news publisher collaborating with the application.
 
-    Satisfies specification:
-    - A publisher can have multiple editors.
-    - A publisher can have multiple journalists.
+    Publishers organise journalists and their publications.
+
+    A publisher can be associated with multiple editors and
+    journalists. Readers can also subscribe to publishers to
+    receive their approved publications.
+
     """
 
     name = models.CharField(max_length=255)
@@ -190,19 +278,29 @@ class Publisher(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
+        """Return the publisher's name.
+
+        :returns: The name of the publisher.
+        :rtype: str
+        """
         return self.name
 
 
 # Article model
+# =============
 class Article(models.Model):
-    """
-    Represents a news article.
+    """Represent a news article submitted by a journalist.
 
-    Satisfies specification:
-    - Articles have a title, content, author, created_at,
-      approved status and publisher.
-    - Articles have a journalist author.
-    - Articles can optionally belong to a publisher.
+    Articles contain written content and may optionally include
+    an uploaded image.
+
+    Each article has a journalist author and can optionally
+    be associated with a publisher.
+
+    Publisher-affiliated articles require editorial approval.
+    Independent articles can be approved without publisher
+    affiliation.
+
     """
 
     title = models.CharField(max_length=255)
@@ -239,6 +337,18 @@ class Article(models.Model):
     approved = models.BooleanField(default=False)
 
     def clean(self):
+        """Validate article authorship and publisher affiliation.
+
+        Ensures that an article's author has the journalist role.
+
+        If the article is associated with a publisher, the journalist
+        must also belong to that publisher.
+
+        :raises ValidationError: If the author is not a journalist
+            or does not belong to the associated publisher.
+        :returns: None.
+        :rtype: None
+        """
 
         super().clean()
 
@@ -258,24 +368,47 @@ class Article(models.Model):
                 )
 
     def save(self, *args, **kwargs):
+        """Validate and save the article.
+
+        Performs full model validation before saving the article
+        to the database.
+
+        :param args: Additional positional arguments passed to
+            the parent model save method.
+        :param kwargs: Additional keyword arguments passed to
+            the parent model save method.
+        :returns: None.
+        :rtype: None
+        """
 
         self.full_clean()
 
         super().save(*args, **kwargs)
 
     def __str__(self):
+        """Return the article title.
+
+        :returns: The title of the article.
+        :rtype: str
+        """
         return self.title
 
 
 # Newsletter
+# ==========
 class Newsletter(models.Model):
-    """
-    Represents a curated collection of articles.
+    """Represent a curated collection of news articles.
 
-    Satisfies specification:
-    - Newsletters have a title, description, created_at
-      and journalist author.
-    - Newsletters can contain multiple articles.
+    Newsletters allow journalists to group multiple articles
+    into a single publication.
+
+    Each newsletter has a title, description, creation date
+    and journalist or editor author.
+
+    Newsletters can optionally be associated with a publisher
+    and contain multiple articles through a many-to-many
+    relationship.
+
     """
 
     title = models.CharField(max_length=255)
@@ -306,6 +439,17 @@ class Newsletter(models.Model):
     approved = models.BooleanField(default=False)
 
     def clean(self):
+        """Validate the role of the newsletter author.
+
+        Ensures that only users with the journalist or editor
+        role can create newsletters.
+
+        :raises ValidationError: If the author does not have
+            the journalist or editor role.
+        :returns: None.
+        :rtype: None
+        """
+
         super().clean()
 
         if self.author_id and self.author.role not in [
@@ -317,6 +461,18 @@ class Newsletter(models.Model):
             )
 
     def save(self, *args, **kwargs):
+        """Validate and save the newsletter.
+
+        Performs full model validation before saving the newsletter
+        to the database.
+
+        :param args: Additional positional arguments passed to
+            the parent model save method.
+        :param kwargs: Additional keyword arguments passed to
+            the parent model save method.
+        :returns: None.
+        :rtype: None
+        """
 
         self.full_clean()
 

@@ -1,4 +1,6 @@
+
 # Functions in this forms.py dictate how user input is handled
+# ============================================================
 
 from django import forms
 from django.contrib.auth.forms import UserCreationForm, AuthenticationForm
@@ -8,15 +10,46 @@ from django.db.models import Q
 
 
 # Reader registration
+# -------------------
 class ReaderRegistrationForm(UserCreationForm):
-    '''
-    Registration for reader accounts. Requires username, email and password
-    '''
+    """Provide a registration form for reader accounts.
+
+    Extends Django's ``UserCreationForm`` to handle the registration
+    of users with the reader role.
+
+    The form collects the username, email address and password
+    confirmation fields required to create a reader account.
+
+    The user's role is automatically assigned as ``READER``
+    when the account is saved.
+
+    """
+
     class Meta:
+        """Define the model and fields used by the registration form."""
+
         model = CustomUser
         fields = ['username', 'email', 'password1', 'password2']
 
     def save(self, commit=True):
+        """Create and save a reader account.
+
+        Uses the parent ``UserCreationForm`` save method to create
+        the user instance without immediately saving it.
+
+        Assigns the reader role before optionally saving the account
+        to the database.
+
+        The ``commit`` argument determines whether the user is saved
+        immediately or returned as an unsaved instance.
+
+        :param commit: Determines whether the user instance is saved
+            to the database.
+        :type commit: bool
+        :returns: The newly created reader user instance.
+        :rtype: CustomUser
+        """
+
         user = super().save(commit=False)
         user.role = CustomUser.Role.READER
 
@@ -27,13 +60,24 @@ class ReaderRegistrationForm(UserCreationForm):
 
 
 # Journalist registration
+# -----------------------
 class JournalistRegistrationForm(UserCreationForm):
-    '''
-    Journalist registration takes username, email and passwords.
-    Journalists affiliated with publishers will link their account to
-    publihsers here. Journalists can select multiple publishers or none.
+    """Provide a registration form for journalist accounts.
 
-    '''
+    Extends Django's ``UserCreationForm`` to support journalist
+    registration.
+
+    The form collects the username, email address and password
+    confirmation fields required to create a journalist account.
+
+    Journalists can optionally associate their accounts with
+    multiple publishers during registration. Independent journalists
+    can leave the publisher selection blank.
+
+    Publisher affiliations are stored using the user model's
+    many-to-many relationship.
+
+    """
 
     journalist_publisher = forms.ModelMultipleChoiceField(
         queryset=Publisher.objects.all(),
@@ -47,6 +91,8 @@ class JournalistRegistrationForm(UserCreationForm):
     )
 
     class Meta:
+        """Define the model and fields used by the registration form."""
+
         model = CustomUser
         fields = [
             'username',
@@ -57,6 +103,25 @@ class JournalistRegistrationForm(UserCreationForm):
 
     @transaction.atomic
     def save(self, commit=True):
+        """Create and save a journalist account.
+
+        Uses the parent ``UserCreationForm`` save method to create
+        the user instance without immediately saving it.
+
+        Assigns the journalist role before saving the account.
+
+        When ``commit`` is enabled, the user is saved to the database
+        and their selected publisher affiliations are assigned.
+
+        The transaction ensures that the user creation and publisher
+        association operations are performed atomically.
+
+        :param commit: Determines whether the user instance is saved
+            to the database.
+        :type commit: bool
+        :returns: The newly created journalist user instance.
+        :rtype: CustomUser
+        """
 
         user = super().save(commit=False)
         user.role = CustomUser.Role.JOURNALIST
@@ -71,13 +136,30 @@ class JournalistRegistrationForm(UserCreationForm):
 
 
 # Editor registration
+# -------------------
 class EditorRegistrationForm(UserCreationForm):
+    """Provide a registration form for editor accounts.
 
-    '''
-    Editor accounts regitser with username, email and passwords.
-    Editors can register their publishers here. Duplicate publishers
-    won't be allowed. Editors can select multiple publihsers.
-    '''
+    Extends Django's ``UserCreationForm`` to support editor
+    registration.
+
+    The form collects the username, email address and password
+    confirmation fields required to create an editor account.
+
+    Editors can associate their accounts with existing publishers
+    or register a new publisher during account creation.
+
+    Multiple existing publishers can be selected. Alternatively,
+    a new publisher can be created by providing its name and
+    an optional description.
+
+    The form prevents editors from selecting existing publishers
+    and creating a new publisher simultaneously.
+
+    Publisher names are checked to prevent duplicate registrations.
+
+    """
+
     editor_publishers = forms.ModelMultipleChoiceField(
         queryset=Publisher.objects.all(),
         required=False,
@@ -109,6 +191,8 @@ class EditorRegistrationForm(UserCreationForm):
     )
 
     class Meta:
+        """Define the model and fields used by the registration form."""
+
         model = CustomUser
         fields = [
             'username',
@@ -118,6 +202,25 @@ class EditorRegistrationForm(UserCreationForm):
         ]
 
     def clean(self):
+        """Validate publisher selections and new publisher details.
+
+        Ensures that the editor selects either existing publishers
+        or provides details for a new publisher.
+
+        The validation prevents the simultaneous selection of
+        existing publishers and creation of a new publisher.
+
+        New publisher names are stripped of surrounding whitespace
+        and checked against existing publisher records to prevent
+        duplicate names.
+
+        :raises ValidationError: If neither an existing publisher
+            nor a new publisher name is provided, or if both are
+            supplied simultaneously.
+        :returns: The validated form data.
+        :rtype: dict
+        """
+
         cleaned_data = super().clean()
 
         existing = cleaned_data.get('editor_publishers')
@@ -154,6 +257,31 @@ class EditorRegistrationForm(UserCreationForm):
 
     @transaction.atomic
     def save(self, commit=True):
+        """Create and save an editor account and publisher associations.
+
+        Uses the parent ``UserCreationForm`` save method to create
+        the user instance without immediately saving it.
+
+        Assigns the editor role to the user.
+
+        If ``commit`` is disabled, returns the unsaved user instance.
+
+        Otherwise, the method either associates the editor with
+        the selected existing publishers or creates a new publisher
+        using the supplied name and description.
+
+        The editor account is then saved and associated with the
+        relevant publishers through the many-to-many relationship.
+
+        The transaction ensures that the database operations are
+        performed atomically.
+
+        :param commit: Determines whether the user instance and
+            publisher associations are saved to the database.
+        :type commit: bool
+        :returns: The newly created editor user instance.
+        :rtype: CustomUser
+        """
 
         user = super().save(commit=False)
         user.role = CustomUser.Role.EDITOR
@@ -177,11 +305,34 @@ class EditorRegistrationForm(UserCreationForm):
 
 
 # Login form
+# -----------
 class CustomLoginForm(AuthenticationForm):
-    '''
-    Login form serves all user roles
-    '''
+    """Provide a customised login form for all user roles.
+
+    Extends Django's ``AuthenticationForm`` to support authentication
+    for readers, journalists and editors.
+
+    Customises the username and password input widgets by applying
+    Bootstrap styling and descriptive placeholder text.
+
+    All user roles access the application through the same login form.
+    """
+
     def __init__(self, *args, **kwargs):
+        """Initialise the login form and customise input widgets.
+
+        Calls the parent authentication form initialisation method
+        before applying CSS classes and placeholder text to the
+        username and password fields.
+
+        :param args: Additional positional arguments passed to
+            the parent authentication form.
+        :param kwargs: Additional keyword arguments passed to
+            the parent authentication form.
+        :returns: None.
+        :rtype: None
+        """
+
         super().__init__(*args, **kwargs)
 
         self.fields['username'].widget.attrs.update({
@@ -196,13 +347,30 @@ class CustomLoginForm(AuthenticationForm):
 
 
 # Article form
+# ------------
 class ArticleForm(forms.ModelForm):
-    '''
-    The article form allows journalists to create articles.
-    Editors will also use the article form when editing. The user
-    can input: title, content, image and optionally select a publisher.
-    '''
+    """Provide a form for creating and editing news articles.
+
+    Extends Django's ``ModelForm`` to handle article creation
+    and editing by journalists and editors.
+
+    The form allows users to enter an article title and content,
+    upload an optional image and select an associated publisher.
+
+    Publisher selection is controlled according to the user's role.
+
+    Journalists can only select publishers with which they are
+    affiliated. Publisher selection is optional for journalists,
+    allowing independent publication.
+
+    Editors can only select publishers assigned to their accounts.
+    Publisher selection is mandatory for editors.
+
+    """
+
     class Meta:
+        """Define the article model and form presentation settings."""
+
         model = Article
 
         fields = [
@@ -249,6 +417,28 @@ class ArticleForm(forms.ModelForm):
         }
 
     def __init__(self, *args, **kwargs):
+        """Initialise the article form and configure publisher choices.
+
+        Extracts the optional user argument before calling the parent
+        ``ModelForm`` initialisation method.
+
+        Publisher choices are restricted according to the user's role.
+
+        For journalists, the available publishers are limited to
+        those associated with their accounts. Publisher selection
+        is optional, allowing independent articles.
+
+        For editors, the available publishers are limited to those
+        assigned to their accounts. Publisher selection is mandatory.
+
+        :param args: Additional positional arguments passed to
+            the parent model form.
+        :param kwargs: Additional keyword arguments, including
+            the optional user instance.
+        :returns: None.
+        :rtype: None
+        """
+
         user = kwargs.pop('user', None)
         super().__init__(*args, **kwargs)
 
@@ -270,13 +460,33 @@ class ArticleForm(forms.ModelForm):
 
 
 # Newsletter form
+# ---------------
 class NewsletterForm(forms.ModelForm):
-    '''
-    The newsletter form will allow creation by both journalists and
-    editors. Articles can be added to the newsletters, when available by
-    the selected publisher, if the journalist is not independant.
-    Otherwise independant journalists can select any of their articles.
-    '''
+    """Provide a form for creating and editing newsletters.
+
+    Extends Django's ``ModelForm`` to support newsletter creation
+    and editing by journalists and editors.
+
+    Users can provide a newsletter title and description, select
+    an associated publisher and include multiple articles.
+
+    Available publishers and articles are filtered according
+    to the authenticated user's role.
+
+    Journalists can select publishers with which they are affiliated
+    and include approved articles written by themselves or
+    associated with their affiliated publishers.
+
+    Independent journalists can create newsletters using their
+    own approved articles without selecting a publisher.
+
+    Editors can only select publishers assigned to their accounts
+    and include approved articles belonging to those publishers.
+
+    The form also validates that all selected articles belong
+    to the selected publisher when a publisher is specified.
+
+    """
 
     publisher = forms.ModelChoiceField(
         queryset=Publisher.objects.none(),
@@ -289,6 +499,8 @@ class NewsletterForm(forms.ModelForm):
     )
 
     class Meta:
+        """Define the newsletter model and form presentation settings."""
+
         model = Newsletter
 
         fields = [
@@ -318,6 +530,34 @@ class NewsletterForm(forms.ModelForm):
         }
 
     def __init__(self, *args, **kwargs):
+        """Initialise the newsletter form and configure available choices.
+
+        Extracts the optional user argument before calling the parent
+        ``ModelForm`` initialisation method.
+
+        The available publishers and articles are filtered according
+        to the user's assigned role.
+
+        For journalists, the publisher queryset is restricted to
+        their affiliated publishers. Publisher selection remains
+        optional.
+
+        Journalists can select approved articles that they authored
+        or articles associated with their affiliated publishers.
+
+        For editors, the publisher queryset is restricted to
+        their assigned publishers. Publisher selection is mandatory.
+
+        Editors can only select approved articles belonging to
+        their assigned publishers.
+
+        :param args: Additional positional arguments passed to
+            the parent model form.
+        :param kwargs: Additional keyword arguments, including
+            the optional user instance.
+        :returns: None.
+        :rtype: None
+        """
 
         user = kwargs.pop('user', None)
         super().__init__(*args, **kwargs)
@@ -352,6 +592,20 @@ class NewsletterForm(forms.ModelForm):
             )
 
     def clean(self):
+        """Validate the relationship between the publisher and articles.
+
+        Retrieves the selected publisher and articles from the
+        cleaned form data.
+
+        If a publisher has been selected, verifies that every
+        selected article belongs to that publisher.
+
+        An error is added to the articles field if any selected
+        article belongs to a different publisher.
+
+        :returns: The validated form data.
+        :rtype: dict
+        """
 
         cleaned_data = super().clean()
 
